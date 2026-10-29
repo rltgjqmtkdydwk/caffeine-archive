@@ -1,0 +1,91 @@
+{
+  "stations": [
+    { "id": "gangnam", "name": "강남", "lines": ["2", "신분당"], "lat": 37.4979, "lng": 127.0276 },
+    { "id": "hongik", "name": "홍대입구", "lines": ["2", "공항", "경의중앙"], "lat": 37.5572, "lng": 126.9245 },
+    { "id": "seongsu", "name": "성수", "lines": ["2"], "lat": 37.5446, "lng": 127.0557 },
+    { "id": "hyehwa", "name": "혜화", "lines": ["4"], "lat": 37.5822, "lng": 127.0019 },
+    { "id": "euljiro3", "name": "을지로3가", "lines": ["2", "3"], "lat": 37.5663, "lng": 126.9926 }
+  ],
+  "cafes": [
+    {
+      "id": "s01", "sample": true,
+      "name": "창가 열두 자리", "type": ["카공"], "station": "seongsu",
+      "lat": 37.5455, "lng": 127.0574, "walk": 3,
+      "address": "성수동 예시 주소", "hours": "08:00–23:00",
+      "tags": ["콘센트 많음", "2층 넓음", "와이파이"],
+      "note": "평일 낮엔 노트북족이 대부분. 창가 바 좌석이 제일 조용함."
+    },
+    {
+      "id": "s02", "sample": true,
+      "name": "벽돌 정원", "type": ["느좋"], "station": "seongsu",
+      "lat": 37.5431, "lng": 127.0539, "walk": 5,
+      "address": "성수동 예시 주소", "hours": "11:00–22:00",
+      "tags": ["테라스", "해질녘 조명"],
+      "note": "공장 개조한 공간. 주말 오후엔 대기 있음."
+    },
+    {
+      "id": "s03", "sample": true,
+      "name": "느린 오후", "type": ["카공", "느좋"], "station": "hongik",
+      "lat": 37.5588, "lng": 126.9232, "walk": 4,
+      "address": "서교동 예시 주소", "hours": "10:00–24:00",
+      "tags": ["큰 테이블", "음악 작게"],
+      "note": "낮엔 작업하기 좋고 밤엔 분위기가 확 바뀜."
+    },
+    {
+      "id": "s04", "sample": true,
+      "name": "연필과 원두", "type": ["카공"], "station": "hongik",
+      "lat": 37.5561, "lng": 126.9268, "walk": 2,
+      "address": "동교동 예시 주소", "hours": "07:30–22:00",
+      "tags": ["1인석", "콘센트", "스터디룸"],
+      "note": "시험 기간엔 아침 일찍 가야 자리 있음."
+    },
+    {
+      "id": "s05", "sample": true,
+      "name": "지하 레코드", "type": ["느좋"], "station": "hongik",
+      "lat": 37.5553, "lng": 126.9221, "walk": 3,
+      "address": "서교동 예시 주소", "hours": "13:00–01:00",
+      "tags": ["LP", "어두운 조명"],
+      "note": "대화하기엔 음악이 조금 큰 편."
+    },
+    {
+      "id": "s06", "sample": true,
+      "name": "강남 작업실", "type": ["카공"], "station": "gangnam",
+      "lat": 37.4992, "lng": 127.0261, "walk": 3,
+      "address": "역삼동 예시 주소", "hours": "00:00–24:00",
+      "tags": ["24시간", "콘센트 전 좌석"],
+      "note": "새벽에도 열어서 마감 전날 피난처."
+    },
+    {
+      "id": "s07", "sample": true,
+      "name": "옥상 위 커피", "type": ["느좋"], "station": "gangnam",
+      "lat": 37.4963, "lng": 127.0291, "walk": 6,
+      "address": "서초동 예시 주소", "hours": "12:00–23:00",
+      "tags": ["루프탑", "야경"],
+      "note": "비 오는 날엔 루프탑 닫음."
+    },
+    {
+      "id": "s08", "sample": true,
+      "name": "마로니에 서재", "type": ["카공"], "station": "hyehwa",
+      "lat": 37.5809, "lng": 127.0031, "walk": 3,
+      "address": "명륜동 예시 주소", "hours": "09:00–22:00",
+      "tags": ["책 많음", "조용함"],
+      "note": "대학로 공연 전후로 붐빔. 평일 오전 추천."
+    },
+    {
+      "id": "s09", "sample": true,
+      "name": "삼층 다방", "type": ["느좋"], "station": "euljiro3",
+      "lat": 37.5671, "lng": 126.9914, "walk": 2,
+      "address": "을지로 예시 주소", "hours": "12:00–22:00",
+      "tags": ["레트로", "간판 없음"],
+      "note": "인쇄소 골목 3층. 계단이 가파름."
+    },
+    {
+      "id": "s10", "sample": true,
+      "name": "공구상가 라운지", "type": ["카공", "느좋"], "station": "euljiro3",
+      "lat": 37.5655, "lng": 126.9939, "walk": 4,
+      "address": "을지로 예시 주소", "hours": "10:00–21:00",
+      "tags": ["넓음", "콘센트"],
+      "note": "천장 높고 좌석 간격 넓어서 오래 있어도 눈치 안 보임."
+    }
+  ]
+}
