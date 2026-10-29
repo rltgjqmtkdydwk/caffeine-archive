@@ -13,18 +13,19 @@
 ## 파일 구조
 
 ```
-index.html          화면 뼈대
-style.css           디자인 전부
-app.js              지도, 필터, 목록, 카페 상세
-reviews.js          로그인, 프로필, 후기 요약, 작성 폼
-config.js           Supabase 주소와 공개 키 (비어 있으면 데모 모드)
-data/cafes.json     카페와 역 목록 (직접 편집)
+public/             사이트 파일 (정적 서빙 루트)
+  index.html        화면 뼈대
+  style.css         디자인 전부
+  app.js            지도, 필터, 목록, 카페 상세
+  reviews.js        로그인, 프로필, 후기 요약, 작성 폼
+  config.js         Supabase 주소와 공개 키 (비어 있으면 데모 모드)
+  data/cafes.json   카페와 역 목록 (직접 편집)
 supabase/schema.sql 테이블, 트리거, 뷰, 권한
 ```
 
 ## 기술 선택
 
-- 정적 사이트 + GitHub Pages: 빌드 도구 없음, 파일 수정 후 커밋하면 배포 끝
+- 정적 사이트 + Cloudflare Pages (public/ 폴더 배포, main 푸시 시 자동): 빌드 도구 없음
 - Supabase 무료 플랜: 후기·프로필만 저장. 카카오 OAuth도 여기서 처리
 - Leaflet + OpenStreetMap/CARTO 타일: 무료, API 키 불필요
 - 길찾기는 네이버 지도/카카오맵 검색 링크로 넘김
@@ -42,14 +43,14 @@ supabase/schema.sql 테이블, 트리거, 뷰, 권한
 ## 로컬 실행
 
 ```
-python3 -m http.server 8000
+python3 -m http.server 8000 -d public
 ```
 
 http://localhost:8000 (`index.html`을 파일로 직접 열면 json 로드 실패)
 
 ## 카페 데이터 형식
 
-`data/cafes.json`의 카페 항목. `walk`, `address`, `hours`, `tags`, `note`는 생략 가능. `id`는 후기가 붙는 키라 한번 정하면 변경 불가.
+`public/data/cafes.json`의 카페 항목. `walk`, `address`, `hours`, `tags`, `note`는 생략 가능. `id`는 후기가 붙는 키라 한번 정하면 변경 불가.
 
 ```json
 {
