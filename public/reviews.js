@@ -98,6 +98,10 @@ window.Reviews = (() => {
   })().catch(console.error);
 
   // 카카오 로그인. 돌아올 때 ?write=카페id 로 와서 바로 쓰던 후기를 이어감
+  // 로그인이 필요한 다른 기능(그룹 담기 등)이 돌아올 곳과 이어서 할 일
+  let loginReturn = null;
+  let afterLogin = null;
+
   async function login(cafeId) {
     if (!LIVE) {
       ls.set(KEY.user, { profile: null });
@@ -109,7 +113,8 @@ window.Reviews = (() => {
     const back = new URL(location.href);
     back.search = '';
     back.hash = '';
-    if (cafeId) back.searchParams.set('write', cafeId);
+    if (loginReturn) Object.entries(loginReturn).forEach(([k, v]) => back.searchParams.set(k, v));
+    else if (cafeId) back.searchParams.set('write', cafeId);
     const { error } = await sb.auth.signInWithOAuth({ provider: 'kakao', options: { redirectTo: back.toString() } });
     if (error) throw error;
     return false;
@@ -322,6 +327,8 @@ window.Reviews = (() => {
 
   function showLogin(cafe) {
     current = cafe;
+    loginReturn = null;
+    afterLogin = null;
     show(`
       ${head('로그인', '카카오로 들어오기')}
       <div class="w-body">
@@ -449,6 +456,17 @@ window.Reviews = (() => {
     return showForm(cafe);
   }
 
+  // 로그인과 닉네임까지 있어야 하는 일. 없으면 로그인 → 닉네임 → then 순서
+  // 카카오로 다녀오면 페이지가 새로 열리니 params를 주소에 붙여서 돌아옴
+  async function member(params, then) {
+    await inited;
+    if (user && profile) return then();
+    if (user) return showProfile(then);
+    showLogin(null);
+    loginReturn = params;
+    afterLogin = then;
+  }
+
   async function openAccount() {
     await inited;
     if (!user) return showLogin(null);
@@ -491,6 +509,7 @@ window.Reviews = (() => {
       b.disabled = true;
       try {
         const stay = await login(current?.id);
+        if (stay && afterLogin) { const f = afterLogin; afterLogin = null; return showProfile(f); }
         if (stay) return current ? startWrite(current) : showProfile(null);
       } catch (err) { console.error(err); fail(explain(err)); b.disabled = false; }
       return;
@@ -590,6 +609,9 @@ window.Reviews = (() => {
     live: LIVE,
     ready: inited,
     db: () => ready.then(() => sb),
+    member,
+    toast,
+    show,
     onChange: f => listeners.push(f),
     me: () => ({ user, profile }),
     markHTML: mark,

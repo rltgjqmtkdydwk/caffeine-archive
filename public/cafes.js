@@ -94,6 +94,20 @@ window.Cafes = (() => {
     return rows[0] || null;
   }
 
+  async function byIds(ids) {
+    if (!ids.length) return [];
+    if (!LIVE) {
+      const all = (await demoData()).cafes;
+      return ids.map(id => all.find(c => c.id === id)).filter(Boolean).map(withStats);
+    }
+    const out = [];
+    for (let i = 0; i < ids.length; i += 150) {
+      out.push(...await run(view(await dbc()).in('id', ids.slice(i, i + 150))));
+    }
+    const order = new Map(ids.map((id, i) => [id, i]));
+    return out.sort((a, b) => order.get(a.id) - order.get(b.id));
+  }
+
   // ---------- 운영자 ----------
   async function setTypes(id, types) {
     const db = await Reviews.db();
@@ -107,5 +121,5 @@ window.Cafes = (() => {
     if (error) throw error;
   }
 
-  return { live: LIVE, reload, stations, classified, inBox, atStation, search, byId, setTypes, setHidden };
+  return { live: LIVE, reload, stations, classified, inBox, atStation, search, byId, byIds, setTypes, setHidden };
 })();

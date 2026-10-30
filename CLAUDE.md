@@ -5,13 +5,15 @@
 ## 구조
 
 - 빌드 도구 없는 정적 사이트. 사이트 파일은 `public/`에 있고 이 폴더가 서빙 루트. Cloudflare Pages가 이 폴더로 배포(main 푸시 시 자동). GitHub Pages는 꺼 둠
-- `public/app.js` 지도·필터·목록·상세 / `cafes.js` 카페·역 데이터 읽기 / `reviews.js` 로그인·프로필·후기 / `style.css` 전부
+- `public/app.js` 지도·필터·목록·상세 / `cafes.js` 카페·역 데이터 읽기 / `lists.js` 그룹(담기·공유) / `reviews.js` 로그인·프로필·후기 / `style.css` 전부
 - 카페와 역: Supabase `cafes`, `stations` 표 (서울 카페 공공데이터를 `tools/import_cafes.py`로 넣음). 공개 조회는 `cafes_public` 뷰. 자세한 건 `docs/data.md`
 - `public/data/cafes.json`은 config가 비어 있을 때 쓰는 데모 데이터
-- 후기·프로필: Supabase. 스키마는 `supabase/schema.sql` 다음 `supabase/cafes.sql`, 키는 `public/config.js` (비어 있으면 localStorage 데모 모드)
+- 후기·프로필: Supabase. 스키마는 `supabase/schema.sql` → `cafes.sql` → `lists.sql` 순서, 키는 `public/config.js` (비어 있으면 localStorage 데모 모드)
 - 카공/느좋: 운영자 지정(`admin_types`, `profiles.is_admin`) 또는 후기 자동 분류(뷰에서 계산)
 - 로그인: 카카오 OAuth(Supabase). 카카오 프로필 정보는 화면에 쓰지 않고 DB에도 남기지 않음. 공개 표시는 사이트 전용 닉네임 + 모양 표시(mark 1–8)
 - 후기는 별점(rating)만 필수, 나머지는 전부 선택. 카페당 사용자당 1개(upsert)
+- 그룹: 사용자별 카페 폴더. 기본 카공·느좋(이름 변경·삭제 불가) + 직접 만든 것. 기본 비공개, 공유하면 `?list=share_id` 링크로 누구나 열람(닉네임만 표시). 카페 하나는 `?cafe=id` 링크
+- 그룹의 카공·느좋은 개인 폴더일 뿐, 지도의 카공·느좋 분류에는 안 섞임
 
 ## 지켜야 할 것
 

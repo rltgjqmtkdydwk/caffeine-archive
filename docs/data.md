@@ -14,7 +14,7 @@
 
 ## 처음 넣기
 
-1. Supabase SQL Editor에서 `supabase/cafes.sql` 실행 (`schema.sql`은 이미 실행된 상태 기준)
+1. Supabase SQL Editor에서 `supabase/cafes.sql`, 이어서 `supabase/lists.sql` 실행 (`schema.sql`은 이미 실행된 상태 기준)
 2. 받은 CSV 두 개를 `data-raw/`에 두고 (깃에는 안 올라감)
 
 ```

@@ -71,7 +71,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   box-shadow: 3px 3px 0 var(--ink);
   transform: rotate(-1.5deg);
 }
-.mode button { padding: 6px 14px 7px; font-weight: 700; font-size: 14px; }
+.mode button { padding: 6px 11px 7px; font-weight: 700; font-size: 14px; }
 .mode button.on { background: var(--ink); color: var(--paper); }
 
 /* 필터 칩 */
@@ -283,6 +283,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   font-size: 13.5px;
 }
 .detail dt { color: var(--ink-soft); }
+.detail .ext {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+  background: linear-gradient(transparent 60%, var(--hi) 60%);
+}
+.detail .ext::after { content: ' ↗'; font-weight: 400; }
 .detail .note {
   margin: 13px 0 4px;
   padding-left: 10px;
@@ -629,6 +636,77 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .admin button { padding: 4px 9px 5px; border: 1.5px solid var(--ink); font-size: 12.5px; font-weight: 700; }
 .admin button.on { background: var(--ink); color: var(--paper); }
 .admin .hide { margin-left: auto; border-style: dashed; color: var(--mood); border-color: var(--mood); }
+
+
+/* 담기·공유 */
+.acts { display: flex; gap: 7px; margin-top: 9px; }
+.acts button {
+  flex: 1;
+  padding: 9px 0 10px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-weight: 700;
+  font-size: 14px;
+}
+.acts button:first-child { background: var(--paper-2); }
+
+/* 그룹 칩 */
+.chip-new { border-style: dashed; color: var(--ink-soft); }
+.chip small { font-size: 10.5px; }
+.chip-study.on { background: var(--study); border-color: var(--study); }
+.chip-mood.on { background: var(--mood); border-color: var(--mood); }
+
+/* 그룹 목록 위 막대 */
+.gbar {
+  padding: 12px 17px 13px 19px;
+  border-bottom: 2px solid var(--ink) !important;
+  background: var(--paper-2);
+}
+.gbar p { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); }
+.gbar p b { color: var(--ink); }
+.gbar .live { padding: 1px 6px 2px; background: var(--mood); color: var(--paper); font-size: 11px; font-weight: 700; }
+.gbar div { display: flex; flex-wrap: wrap; gap: 6px 5px; margin-top: 9px; }
+.gbar button { padding: 6px 11px 7px; border: 1.5px solid var(--ink); background: var(--hi); font-size: 13px; font-weight: 700; }
+.gbar button.ghost { background: var(--paper); font-weight: 500; }
+.gbar button.danger { color: var(--mood); border-color: var(--mood); border-style: dashed; }
+.gbar.shared { background: var(--hi); }
+.gbar.shared button { background: var(--ink); color: var(--paper); }
+.gbar.shared button.ghost { background: var(--paper); color: var(--ink); }
+
+/* 담기 창 */
+.picks { list-style: none; padding: 0; margin: 2px 0 0; }
+.picks li { border-bottom: 1px dashed #b3a690; }
+.pick { display: flex; align-items: center; gap: 11px; width: 100%; padding: 13px 3px 14px 1px; text-align: left; }
+.pick .box { flex: none; width: 21px; height: 21px; border: 2px solid var(--ink); background: var(--paper); }
+.pick.on .box { background: var(--ink); box-shadow: inset 0 0 0 3px var(--hi); }
+.pick b { font-size: 16px; }
+.pick small { margin-left: auto; font-size: 12px; color: var(--ink-soft); }
+.new-list { display: flex; gap: 6px; margin-top: 17px; }
+.new-list input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 11px 11px;
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+  background: #f6f1e7;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+}
+.new-list input:focus { outline: 2px solid var(--hi); outline-offset: 1px; }
+.new-list button { padding: 0 13px; border: 1.5px dashed var(--ink); font-size: 13.5px; font-weight: 700; }
+
+
+/* 좁은 화면에서 머리줄이 두 줄로 깨지지 않게 */
+.logo, .logo span, .me, .mode button { white-space: nowrap; }
+.top { gap: 9px; }
+.top-r { gap: 8px; flex: none; }
+@media (max-width: 420px) {
+  .logo { font-size: clamp(24px, 7.2vw, 31px); gap: 5px; }
+  .logo span { font-size: 12.5px; padding: 2px 4px 3px; }
+  .mode button { padding: 6px 9px 7px; font-size: 13.5px; }
+  .me { min-width: 33px; height: 31px; padding: 0 6px; font-size: 12px; }
+}
 
 /* 넓은 화면 */
 @media (min-width: 860px) {
