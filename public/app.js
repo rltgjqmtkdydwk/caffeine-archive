@@ -589,6 +589,7 @@ function closeCafe(redraw = true) {
 
 // 후기를 쓰거나 운영자가 표시를 바꾸면 그 카페 정보와 분류 핀을 다시 받음
 async function refreshCafe(id) {
+  if (state.mode === 'group') loadLists();
   try {
     await reloadClassified();
     const c = await Cafes.byId(id);

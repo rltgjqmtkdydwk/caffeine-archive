@@ -125,6 +125,20 @@ window.Lists = (() => {
     return data;
   }
 
+  // 데모에서만: 후기의 카공·느좋 선택을 기본 그룹에 반영 (Supabase는 DB 트리거가 함)
+  function syncFromReview(cafeId, before, after) {
+    if (LIVE) return;
+    const a = demo.all();
+    ['study', 'mood'].forEach(k => {
+      const had = before.includes(k), has = after.includes(k);
+      if (had === has) return;
+      const l = a.find(x => x.kind === k);
+      if (!l) return;
+      l.items = has ? [cafeId, ...l.items.filter(x => x !== cafeId)] : l.items.filter(x => x !== cafeId);
+    });
+    demo.save(a);
+  }
+
   // ---------- 링크 ----------
   const linkTo = params => {
     const u = new URL(location.origin + location.pathname);
@@ -241,5 +255,5 @@ window.Lists = (() => {
     }
   });
 
-  return { live: LIVE, mine, create, rename, remove, add, drop, share, unshare, shared, linkTo, sendLink, openPicker };
+  return { live: LIVE, syncFromReview, mine, create, rename, remove, add, drop, share, unshare, shared, linkTo, sendLink, openPicker };
 })();

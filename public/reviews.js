@@ -16,7 +16,7 @@ window.Reviews = (() => {
 
   // 질문 목록. rating만 필수, 나머지는 선택
   const Q = [
-    { k: 'good_for', label: '여기 뭐 하기 좋아?', multi: 2, big: true, opts: [['study', '카공'], ['mood', '느좋']] },
+    { k: 'good_for', label: '여기 뭐 하기 좋아?', multi: 2, big: true, note: '고르면 내 그룹에도 담겨', opts: [['study', '카공'], ['mood', '느좋']] },
     { group: '공간' },
     { k: 'seats', label: '자리 수', opts: [[1, '10석 안쪽'], [2, '10–30석'], [3, '30–60석'], [4, '60석 넘게']] },
     { k: 'noise', label: '소음', opts: [[1, '도서관'], [2, '잔잔'], [3, '대화 소리'], [4, '시끌벅적']] },
@@ -205,6 +205,7 @@ window.Reviews = (() => {
       const rec = { ...row, cafe_id: cafeId, user_id: 'demo', id: prev?.id || Date.now(), created_at: prev?.created_at || now, updated_at: now };
       if (i >= 0) all[i] = rec; else all.push(rec);
       ls.set(KEY.reviews, all);
+      window.Lists?.syncFromReview(cafeId, prev?.good_for || [], row.good_for || []);
       return;
     }
     const { error } = await sb.from('reviews')
@@ -588,7 +589,8 @@ window.Reviews = (() => {
       try {
         await save(current.id, row);
         close();
-        toast('후기 올렸어요. 고마워요');
+        const names = (row.good_for || []).map(k => k === 'study' ? '카공' : '느좋');
+        toast(names.length ? `후기 올렸어요. ${names.join('·')} 그룹에도 담았어` : '후기 올렸어요. 고마워요');
         onDone?.();
       } catch (err) {
         console.error(err);

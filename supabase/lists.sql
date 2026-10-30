@@ -174,3 +174,52 @@ grant execute on function public.ensure_default_lists() to authenticated;
 grant execute on function public.share_list(uuid) to authenticated;
 grant execute on function public.unshare_list(uuid) to authenticated;
 grant execute on function public.get_shared_list(text) to anon, authenticated;
+
+
+-- 4. 후기 → 기본 그룹 ------------------------------------------------------------
+--    후기에서 카공·느좋을 고르면 내 카공·느좋 그룹에 자동으로 담김
+--    후기를 고치면서 체크를 빼면 그 그룹에서도 빠짐. 직접 담은 건 후기와 상관없이 그대로
+--    후기를 지워도 그룹은 안 건드림
+
+create or replace function public.sync_review_lists()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  k     text;
+  lid   uuid;
+  had   boolean;
+  has   boolean;
+begin
+  begin
+    insert into public.lists (user_id, name, kind)
+    select new.user_id, d.name, d.kind
+    from (values ('카공', 'study'), ('느좋', 'mood')) as d (name, kind)
+    on conflict do nothing;
+
+    foreach k in array array['study', 'mood'] loop
+      has := k = any (coalesce(new.good_for, '{}'));
+      had := tg_op = 'UPDATE' and k = any (coalesce(old.good_for, '{}'));
+      continue when has = had;
+      select id into lid from public.lists where user_id = new.user_id and kind = k;
+      continue when lid is null;
+      if has then
+        insert into public.list_items (list_id, cafe_id) values (lid, new.cafe_id) on conflict do nothing;
+      else
+        delete from public.list_items where list_id = lid and cafe_id = new.cafe_id;
+      end if;
+    end loop;
+  exception when others then
+    -- 그룹이 꽉 찼거나 해도 후기 저장은 막지 않음
+    raise warning 'sync_review_lists: %', sqlerrm;
+  end;
+  return new;
+end;
+$$;
+
+drop trigger if exists reviews_sync_lists on public.reviews;
+create trigger reviews_sync_lists
+  after insert or update of good_for on public.reviews
+  for each row execute function public.sync_review_lists();
