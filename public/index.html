@@ -25,9 +25,14 @@
   </div>
 </header>
 
-<nav class="chips" id="chips" aria-label="필터"></nav>
+<nav class="chips" id="chips" aria-label="필터">
+  <input type="search" id="q" class="q" placeholder="카페 이름" autocomplete="off" enterkeyhint="search">
+  <div id="chip-list" class="chip-list"></div>
+</nav>
 
 <div id="map"></div>
+
+<button type="button" class="hint" id="hint" hidden>더 당기면 근처 카페가 다 보여요</button>
 
 <button type="button" class="locate" id="locate" aria-label="내 위치">
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="5"/><path d="M12 1v5M12 18v5M1 12h5M18 12h5"/></svg>
@@ -46,6 +51,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="config.js"></script>
 <script src="reviews.js"></script>
+<script src="cafes.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

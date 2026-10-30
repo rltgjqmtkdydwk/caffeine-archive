@@ -69,7 +69,7 @@ window.Reviews = (() => {
   const emit = () => listeners.forEach(f => f({ user, profile }));
 
   async function fetchProfile() {
-    const { data } = await sb.from('profiles').select('nickname, mark').eq('id', user.id).maybeSingle();
+    const { data } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
     return data;
   }
 
@@ -122,7 +122,7 @@ window.Reviews = (() => {
       const { error } = await sb.from('profiles').upsert({ id: user.id, ...p });
       if (error) throw error;
     }
-    profile = p;
+    profile = { ...profile, ...p };
     emit();
   }
 
@@ -589,6 +589,7 @@ window.Reviews = (() => {
   return {
     live: LIVE,
     ready: inited,
+    db: () => ready.then(() => sb),
     onChange: f => listeners.push(f),
     me: () => ({ user, profile }),
     markHTML: mark,
