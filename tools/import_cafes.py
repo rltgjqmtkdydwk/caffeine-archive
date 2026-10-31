@@ -33,6 +33,9 @@ WALK_M_PER_MIN = 67        # 4km/h
 DETOUR = 1.3               # 직선거리 → 실제 걷는 거리 어림
 
 CAFE_RE = re.compile(r'카페|커피')
+# 이름에 '카페'가 붙어도 커피 마시러 가는 곳은 아닌 업종
+SKIP_RE = re.compile(r'독서실|스터디|오락|키즈|보드|만화|노래|PC|피시|게임')
+SAME_SPOT_M = 200          # 이름이 달라도 이만큼 붙어 있으면 한 역 (총신대입구·이수 같은 환승역)
 
 COLS = {
     'id':       ['상가업소번호'],
@@ -161,16 +164,33 @@ def load_stations(path):
         else:
             groups[name].append({'name': name, 'lines': [line] if line else [], 'lat': lat, 'lng': lng, 'pts': [(lat, lng)]})
 
-    out, used = [], set()
+    spots = []
     for name, gs in groups.items():
-        for i, g in enumerate(gs):
-            lat = sum(p[0] for p in g['pts']) / len(g['pts'])
-            lng = sum(p[1] for p in g['pts']) / len(g['pts'])
-            sid = name if len(gs) == 1 else f'{name}-{g["lines"][0] if g["lines"] else i + 1}'
-            while sid in used:
-                sid += "'"
-            used.add(sid)
-            out.append({'id': sid, 'name': name, 'lines': sorted(g['lines'], key=line_order), 'lat': round(lat, 6), 'lng': round(lng, 6)})
+        for g in gs:
+            g['lat'] = sum(p[0] for p in g['pts']) / len(g['pts'])
+            g['lng'] = sum(p[1] for p in g['pts']) / len(g['pts'])
+            g['names'] = [name]
+            for t in spots:
+                if dist_m(g['lat'], g['lng'], t['lat'], t['lng']) < SAME_SPOT_M:
+                    t['names'] += [n for n in g['names'] if n not in t['names']]
+                    t['lines'] += [l for l in g['lines'] if l not in t['lines']]
+                    t['pts'] += g['pts']
+                    t['lat'] = sum(p[0] for p in t['pts']) / len(t['pts'])
+                    t['lng'] = sum(p[1] for p in t['pts']) / len(t['pts'])
+                    break
+            else:
+                spots.append(g)
+
+    out, used = [], set()
+    for t in spots:
+        name = '·'.join(sorted(t['names'], key=len))
+        sid = name
+        if sid in used:
+            sid = f'{name}-{t["lines"][0]}' if t['lines'] else name
+        while sid in used:
+            sid += "'"
+        used.add(sid)
+        out.append({'id': sid, 'name': name, 'lines': sorted(t['lines'], key=line_order), 'lat': round(t['lat'], 6), 'lng': round(t['lng'], 6)})
     return out
 
 
@@ -191,12 +211,15 @@ def load_cafes(path, stations):
     for s in stations:
         grid[(int(s['lat'] * 100), int(s['lng'] * 100))].append(s)
 
-    cats = Counter()
+    cats, skipped = Counter(), Counter()
     out, seen = [], set()
     for r in rows:
         cat = r[c['cat']] if 'cat' in c else ''
         std = r[c['cat_std']] if 'cat_std' in c else ''
         if not (CAFE_RE.search(cat) or CAFE_RE.search(std)):
+            continue
+        if SKIP_RE.search(cat):
+            skipped[cat] += 1
             continue
         if 'sido' in c and '서울' not in r[c['sido']]:
             continue
@@ -230,7 +253,7 @@ def load_cafes(path, stations):
             'address': addr[:160] or None, 'station_id': best['id'] if best else None,
             'walk': walk, 'source': 'semas',
         })
-    return out, cats
+    return out, cats, skipped
 
 
 # ---------- 내보내기 ----------
@@ -281,7 +304,15 @@ def main():
     if not stations:
         sys.exit('역을 하나도 못 읽음. 좌표 열을 확인해 볼 것')
 
-    cafes, cats = load_cafes(a.shops, stations)
+    cafes, cats, skipped = load_cafes(a.shops, stations)
+    for k, v in skipped.most_common():
+        print(f'  뺀 업종 "{k}": {v}')
+
+    # 가까운 카페가 하나도 없는 역(서울 밖 경계 역 등)은 버림
+    used = {x['station_id'] for x in cafes}
+    dropped = len(stations) - len(used)
+    stations = [s for s in stations if s['id'] in used]
+    print(f'역 {len(stations)}곳만 남김 (카페가 안 붙은 역 {dropped}곳 뺌)')
     near = sum(1 for x in cafes if x['station_id'])
     print(f'카페 {len(cafes)}곳 (역 {MAX_WALK_M}m 안: {near}곳)')
     for k, v in cats.most_common(6):
