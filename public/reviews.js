@@ -4,8 +4,8 @@ window.Reviews = (() => {
   const LIVE = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
   const KEY = { reviews: 'caffeine-demo-reviews', user: 'caffeine-demo-user' };
 
-  const STAR_WORDS = ['', '별로', '아쉬움', '괜찮음', '좋음', '또 갈 곳'];
-  const MARKS = 8;
+  const STAR_WORDS = ['', '별로예요', '아쉬워요', '괜찮아요', '좋아요', '또 갈래요'];
+  const MARKS = Avatars.count;
   const NICK_RE = /^[가-힣a-zA-Z0-9_.]{2,12}$/;
 
   const STYLES = [
@@ -16,19 +16,19 @@ window.Reviews = (() => {
 
   // 질문 목록. rating만 필수, 나머지는 선택
   const Q = [
-    { k: 'good_for', label: '여기 뭐 하기 좋아?', multi: 2, big: true, note: '고르면 내 그룹에도 담겨', opts: [['study', '카공'], ['mood', '느좋']] },
+    { k: 'good_for', label: '여기 뭐 하기 좋아요?', multi: 2, big: true, note: '고르면 내 그룹에도 담겨요', opts: [['study', '카공'], ['mood', '느좋']] },
     { group: '공간' },
     { k: 'seats', label: '자리 수', opts: [[1, '10석 안쪽'], [2, '10–30석'], [3, '30–60석'], [4, '60석 넘게']] },
-    { k: 'noise', label: '소음', opts: [[1, '도서관'], [2, '잔잔'], [3, '대화 소리'], [4, '시끌벅적']] },
-    { k: 'outlets', label: '콘센트', opts: [[1, '거의 없음'], [2, '몇 자리'], [3, '넉넉']] },
+    { k: 'noise', label: '소음', opts: [[1, '도서관 같아요'], [2, '잔잔해요'], [3, '대화 소리 들려요'], [4, '시끌벅적해요']] },
+    { k: 'outlets', label: '콘센트', opts: [[1, '거의 없어요'], [2, '몇 자리 있어요'], [3, '넉넉해요']] },
     { group: '시간' },
-    { k: 'time_limit', label: '이용 시간 제한', opts: [[0, '없음'], [2, '2시간'], [3, '3시간'], [4, '4시간 이상']] },
+    { k: 'time_limit', label: '이용 시간 제한', opts: [[0, '없어요'], [2, '2시간'], [3, '3시간'], [4, '4시간 이상']] },
     { k: 'close_at', label: '마감', opts: [[1, '9시 전'], [2, '10시'], [3, '11시'], [4, '자정'], [5, '새벽·24시']] },
     { group: '메뉴' },
-    { k: 'dessert', label: '디저트 종류', opts: [[0, '없음'], [1, '1–3개'], [2, '4–9개'], [3, '10개 이상']] },
-    { k: 'roasting', label: '원두 로스팅', opts: [[true, '직접 볶음'], [false, '아님']] },
+    { k: 'dessert', label: '디저트 종류', opts: [[0, '없어요'], [1, '1–3개'], [2, '4–9개'], [3, '10개 이상']] },
+    { k: 'roasting', label: '원두 로스팅', opts: [[true, '직접 볶아요'], [false, '아니에요']] },
     { group: '분위기' },
-    { k: 'quirk', label: '개성', opts: [[1, '무난함'], [2, '개성 있음'], [3, '여긴 진짜 특이함']] },
+    { k: 'quirk', label: '개성', opts: [[1, '무난해요'], [2, '개성 있어요'], [3, '여긴 진짜 특이해요']] },
     { k: 'styles', label: '추구미', multi: 2, note: '2개까지', opts: STYLES }
   ];
   const QS = Q.filter(q => q.k);
@@ -38,7 +38,7 @@ window.Reviews = (() => {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, ch =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const labelOf = (q, v) => (q.opts.find(([x]) => x === v) || [])[1];
-  const mark = n => `<i class="mk mk-${Number(n) || 1}" aria-hidden="true"></i>`;
+  const mark = n => `<i class="mk" title="${Avatars.nameOf(n)}">${Avatars.svg(n)}</i>`;
   const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
 
   const ls = {
@@ -186,6 +186,16 @@ window.Reviews = (() => {
     });
     Object.values(m).forEach(s => { s.avg = s.sum / s.n; });
     return m;
+  }
+
+  // 내가 후기 쓴 카페 id들 (지도에 표시용). 로그인 안 했으면 빈 목록
+  async function reviewedIds() {
+    await inited;
+    if (!user) return [];
+    if (!LIVE) return ls.get(KEY.reviews, []).filter(r => r.user_id === 'demo').map(r => r.cafe_id);
+    const { data, error } = await sb.from('reviews').select('cafe_id').eq('user_id', user.id).limit(5000);
+    if (error) throw error;
+    return data.map(r => r.cafe_id);
   }
 
   async function mine(cafeId) {
@@ -340,6 +350,7 @@ window.Reviews = (() => {
           <li>탈퇴하면 계정과 후기가 전부 지워져요.</li>
         </ul>
         ${LIVE ? '' : '<p class="w-demo">데모 모드라 실제 카카오 대신 이 브라우저에 가짜 계정을 만들어요.</p>'}
+        <button type="button" class="to-settings" data-me="settings">글씨 크기 바꾸기 ›</button>
       </div>
       <footer class="w-foot">
         <p class="w-err" hidden></p>
@@ -360,9 +371,10 @@ window.Reviews = (() => {
   function showProfile(next) {
     afterProfile = next || null;
     const first = !profile;
-    pDraft = { nickname: profile?.nickname || suggestNick(), mark: profile?.mark || Math.ceil(Math.random() * MARKS) };
+    const m0 = profile?.mark ? ((profile.mark - 1) % MARKS) + 1 : Math.ceil(Math.random() * MARKS);
+    pDraft = { nickname: profile?.nickname || suggestNick(), mark: m0 };
     show(`
-      ${head(first ? '처음 한 번만' : '내 프로필', first ? '여기서 쓸 이름 정하기' : esc(profile.nickname))}
+      ${head(first ? '처음 한 번만' : '내 프로필', first ? '여기서 쓸 이름을 정해요' : '닉네임·표시 바꾸기')}
       <div class="w-body">
         <p class="w-hint">후기 옆에 붙는 건 이 닉네임과 표시뿐이에요. 카카오에서 쓰는 이름과 다르게 지으면 누가 썼는지 아무도 몰라요.</p>
         <label class="w-label" for="nick">닉네임 <small>2–12자, 한글·영문·숫자</small></label>
@@ -372,12 +384,7 @@ window.Reviews = (() => {
         </div>
         <p class="w-label" style="margin-top:19px">표시</p>
         <div class="marks">${Array.from({ length: MARKS }, (_, i) =>
-          `<button type="button" data-act="mark" data-v="${i + 1}" class="${pDraft.mark === i + 1 ? 'on' : ''}" aria-label="표시 ${i + 1}">${mark(i + 1)}</button>`).join('')}</div>
-        ${first ? '' : `
-          <div class="acct">
-            <button type="button" data-act="logout">로그아웃</button>
-            <button type="button" data-act="delete-account" class="danger">탈퇴하기 (내 후기도 전부 삭제)</button>
-          </div>`}
+          `<button type="button" data-act="mark" data-v="${i + 1}" class="${pDraft.mark === i + 1 ? 'on' : ''}" aria-label="${Avatars.nameOf(i + 1)}">${mark(i + 1)}<small>${Avatars.nameOf(i + 1)}</small></button>`).join('')}</div>
       </div>
       <footer class="w-foot">
         <p class="w-err" hidden></p>
@@ -395,7 +402,7 @@ window.Reviews = (() => {
     const r = draft.rating || 0;
     return `<div class="w-stars" role="radiogroup" aria-label="별점">
       ${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="${r === n}" aria-label="${n}점" data-act="star" data-v="${n}" class="${n <= r ? 'on' : ''}">★</button>`).join('')}
-      <span class="w-star-word">${r ? `${r}점 · ${STAR_WORDS[r]}` : '눌러서 별점 주기'}</span>
+      <span class="w-star-word">${r ? `${r}점 · ${STAR_WORDS[r]}` : '눌러서 별점을 주세요'}</span>
     </div>`;
   }
 
@@ -419,7 +426,7 @@ window.Reviews = (() => {
           <span class="w-label">별점 <small class="req">필수</small></span>
           <div id="stars">${starsHTML()}</div>
         </div>
-        <p class="w-hint">여기부터는 아는 것만 톡톡. 모르면 비워 두고, 한 번 더 누르면 취소.</p>
+        <p class="w-hint">여기부터는 아는 것만 톡톡 눌러 주세요. 모르면 비워 두고, 한 번 더 누르면 취소돼요.</p>
         ${qs}
         <p class="w-group">한마디</p>
         <label class="w-text">
@@ -576,7 +583,7 @@ window.Reviews = (() => {
     if (act === 'del-review') {
       if (!confirm('이 카페에 남긴 내 후기를 지울까요?')) return;
       try { await remove(current.id); close(); toast('지웠어요'); onDone?.(); }
-      catch (err) { console.error(err); fail('지우지 못했어요.'); }
+      catch (err) { console.error(err); fail('지우지 못했어요. 잠시 뒤 다시 해 주세요.'); }
       return;
     }
 
@@ -590,7 +597,7 @@ window.Reviews = (() => {
         await save(current.id, row);
         close();
         const names = (row.good_for || []).map(k => k === 'study' ? '카공' : '느좋');
-        toast(names.length ? `후기 올렸어요. ${names.join('·')} 그룹에도 담았어` : '후기 올렸어요. 고마워요');
+        toast(names.length ? `후기 올렸어요. ${names.join('·')} 그룹에도 담았어요` : '후기 올렸어요. 고마워요');
         onDone?.();
       } catch (err) {
         console.error(err);
@@ -611,9 +618,13 @@ window.Reviews = (() => {
     live: LIVE,
     ready: inited,
     db: () => ready.then(() => sb),
+    reviewedIds,
     member,
     toast,
     show,
+    editProfile: then => showProfile(then),
+    logout,
+    deleteAccount,
     onChange: f => listeners.push(f),
     me: () => ({ user, profile }),
     markHTML: mark,

@@ -2,7 +2,7 @@
 -- cafes.sql 다음에 실행. 여러 번 실행해도 안전하게 작성
 --
 -- 구조
---   lists        사용자가 만든 그룹. 기본으로 카공·느좋 그룹이 하나씩 생김
+--   lists        사용자가 만든 그룹. 기본으로 하트·카공·느좋 그룹이 하나씩 생김
 --   list_items   그룹에 담긴 카페
 --
 -- 그룹은 기본 비공개. 공유를 켜면 추측하기 어려운 share_id가 생기고,
@@ -15,7 +15,7 @@ create table if not exists public.lists (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null default auth.uid() references public.profiles (id) on delete cascade,
   name        text not null check (char_length(btrim(name)) between 1 and 20),
-  kind        text check (kind in ('study', 'mood')),     -- 기본 그룹 표시. 직접 만든 그룹은 null
+  kind        text,                                       -- 기본 그룹 표시(heart·study·mood). 직접 만든 그룹은 null
   share_id    text unique,                                -- null이면 비공개
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
@@ -23,6 +23,15 @@ create table if not exists public.lists (
 
 create unique index if not exists lists_default_idx on public.lists (user_id, kind) where kind is not null;
 create index if not exists lists_user_idx on public.lists (user_id, created_at);
+
+-- 기본 그룹은 하트·카공·느좋 세 가지
+alter table public.lists drop constraint if exists lists_kind_check;
+alter table public.lists add constraint lists_kind_check check (kind is null or kind in ('heart', 'study', 'mood'));
+
+-- 그룹 색 (#rrggbb). 비어 있으면 화면에서 기본색
+alter table public.lists add column if not exists color text;
+alter table public.lists drop constraint if exists lists_color_hex;
+alter table public.lists add constraint lists_color_hex check (color is null or color ~ '^#[0-9a-f]{6}$');
 
 create table if not exists public.list_items (
   list_id   uuid not null references public.lists (id) on delete cascade,
@@ -49,7 +58,7 @@ drop policy if exists "own items delete" on public.list_items;
 
 create policy "own lists read"   on public.lists for select to authenticated using (user_id = auth.uid());
 create policy "own lists write"  on public.lists for insert to authenticated with check (user_id = auth.uid() and kind is null);
-create policy "own lists edit"   on public.lists for update to authenticated using (user_id = auth.uid() and kind is null) with check (user_id = auth.uid());
+create policy "own lists edit"   on public.lists for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own lists delete" on public.lists for delete to authenticated using (user_id = auth.uid() and kind is null);
 
 create policy "own items read"   on public.list_items for select to authenticated
@@ -61,7 +70,25 @@ create policy "own items delete" on public.list_items for delete to authenticate
 
 revoke all on public.lists, public.list_items from anon, authenticated;
 grant select, delete on public.lists to authenticated;
-grant insert (name), update (name) on public.lists to authenticated;   -- share_id, kind는 아래 함수로만
+grant insert (name, color), update (name, color) on public.lists to authenticated;   -- share_id, kind는 아래 함수로만
+
+-- 기본 그룹(하트·카공·느좋)은 색은 바꿔도 되지만 이름은 그대로
+create or replace function public.lists_guard()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if old.kind is not null and new.name is distinct from old.name then
+    raise exception 'default list name is fixed';
+  end if;
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists lists_guard on public.lists;
+create trigger lists_guard before update on public.lists for each row execute function public.lists_guard();
 grant select, insert (list_id, cafe_id), delete on public.list_items to authenticated;
 
 -- 그룹은 한 사람당 30개, 그룹 하나에 카페 500곳까지
@@ -94,7 +121,7 @@ create trigger list_items_limit before insert on public.list_items for each row 
 
 -- 3. 함수 --------------------------------------------------------------------------
 
--- 기본 그룹(카공·느좋)이 없으면 만들어 줌. 로그인할 때마다 불러도 됨
+-- 기본 그룹(하트·카공·느좋)이 없으면 만들어 줌. 로그인할 때마다 불러도 됨
 create or replace function public.ensure_default_lists()
 returns void
 language sql
@@ -103,7 +130,7 @@ set search_path = ''
 as $$
   insert into public.lists (user_id, name, kind)
   select auth.uid(), d.name, d.kind
-  from (values ('카공', 'study'), ('느좋', 'mood')) as d (name, kind)
+  from (values ('하트', 'heart'), ('카공', 'study'), ('느좋', 'mood')) as d (name, kind)
   where auth.uid() is not null
     and exists (select 1 from public.profiles where id = auth.uid())
   on conflict do nothing;
@@ -152,6 +179,8 @@ set search_path = ''
 as $$
   select json_build_object(
     'name', l.name,
+    'kind', l.kind,
+    'color', l.color,
     'nickname', p.nickname,
     'mark', p.mark,
     'cafes', coalesce((
@@ -196,7 +225,7 @@ begin
   begin
     insert into public.lists (user_id, name, kind)
     select new.user_id, d.name, d.kind
-    from (values ('카공', 'study'), ('느좋', 'mood')) as d (name, kind)
+    from (values ('하트', 'heart'), ('카공', 'study'), ('느좋', 'mood')) as d (name, kind)
     on conflict do nothing;
 
     foreach k in array array['study', 'mood'] loop

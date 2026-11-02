@@ -19,24 +19,53 @@ const state = {
   mode: 'type', type: 'all', station: 'all',
   stations: [], classified: [], nearby: [], stationCafes: [], results: null,
   cache: new Map(), open: null, query: { type: '', station: '' },
-  myLists: [], list: null, groupCafes: [], shared: null
+  myLists: [], group: null, groupCafes: [], shared: null,
+  reviewed: new Set()
 };
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, ch =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const wide = () => window.innerWidth >= 860;
+const sheetState = () => document.body.dataset.sheet || 'peek';
+function setSheet(s) {
+  document.body.dataset.sheet = s;
+  $('#handle').setAttribute('aria-label', s === 'peek' ? '목록 열기' : '목록 접기');
+}
 const remember = list => { list.forEach(c => state.cache.set(c.id, c)); return list; };
 const stationById = id => state.stations.find(s => s.id === id);
 const matchesType = c => state.type === 'all' || (c.types || []).includes(state.type);
-const currentList = () => state.myLists.find(l => l.id === state.list);
+const ICON = {
+  share: '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7h14v-7"/></svg>'
+};
+// 내 그룹 어딘가에 담긴 카페면 하트를 채움
+// ♥ 그룹이나 직접 만든 그룹 어디든 담겨 있으면 하트를 채움 (카공·느좋은 후기로 자동이라 제외)
+const isSaved = id => state.myLists.some(l => (l.kind === 'heart' || !l.kind) && l.items.includes(id));
+// 내가 후기 쓴 카페: 지도 점은 노랗게, 핀엔 별 딱지, 목록엔 "내 후기"
+async function refreshReviewed() {
+  try { state.reviewed = new Set(await Reviews.reviewedIds()); } catch (e) { console.error(e); }
+}
+async function refreshMyLists() {
+  if (!Reviews.me().profile) { state.myLists = []; return; }
+  try { state.myLists = await Lists.mine(); } catch (e) { console.error(e); }
+}
+function paintHeart() {
+  const b = document.querySelector('#detail .heart');
+  if (!b || !state.open) return;
+  const on = isSaved(state.open);
+  b.classList.toggle('on', on);
+  b.setAttribute('aria-pressed', on);
+  b.setAttribute('aria-label', on ? '♥︎에 담겨 있어요' : '♥︎에 담기');
+  b.textContent = on ? '♥\uFE0E' : '♡\uFE0E';
+}
+const currentList = () => state.myLists.find(l => l.id === state.group);
 
 // 그룹을 보고 있을 때(내 그룹이거나 링크로 받은 그룹)는 그 카페들만 지도와 목록에
 function groupView() {
-  if (state.shared) return { kind: 'shared', title: state.shared.name, cafes: state.shared.cafes };
-  if (state.mode === 'group') {
+  if (state.shared) return { kind: 'shared', title: Lists.label(state.shared), cafes: state.shared.cafes };
+  if (state.group) {
     const l = currentList();
-    return { kind: 'mine', title: l ? l.name : '그룹', cafes: l ? state.groupCafes : [], list: l };
+    return { kind: 'mine', title: l ? Lists.label(l) : '그룹', cafes: l ? state.groupCafes : [], list: l };
   }
   return null;
 }
@@ -79,7 +108,7 @@ let me = null;
     state.stations = stations;
     state.classified = remember(classified);
     drawStations();
-    if (classified.length) fitTo(classified, 15);
+    startView();
     await refreshView();
     resumeWrite();
   } catch (err) {
@@ -88,6 +117,16 @@ let me = null;
     $('#list').innerHTML = '<li class="empty">카페 정보를 못 불러왔어요. 잠시 뒤에 다시 열어 주세요.</li>';
   }
 })();
+
+// ---------- 처음 화면 ----------
+// 카공·느좋 표시가 붙은 카페가 넉넉하면 그걸 다 보이게, 아직 적으면 카페가 몰린 동네를
+// 점이 다 보이는 크기로 열어서 빈 지도처럼 안 보이게
+const START_SPOT = [37.5572, 126.9245];   // 홍대입구역
+const ENOUGH_PINS = 8;
+function startView() {
+  if (state.classified.length >= ENOUGH_PINS) return fitTo(state.classified, 15);
+  map.setView(START_SPOT, DOT_ZOOM);
+}
 
 // ---------- 불러오기 ----------
 
@@ -146,11 +185,13 @@ function toggleLabels() {
   $('#hint').hidden = !(!groupView() && state.type === 'all' && map.getZoom() < DOT_ZOOM && state.station === 'all' && !state.results);
 }
 
-function pinIcon(c, on) {
+function pinIcon(c, on, color) {
   const t = c.types || [];
-  const k = t.length > 1 ? 'both' : t.length ? (TYPES[t[0]]?.key || 'study') : 'none';
+  const k = color ? 'g' : t.length > 1 ? 'both' : t.length ? (TYPES[t[0]]?.key || 'study') : 'none';
   const label = t.length ? t.map(x => TYPES[x]?.short || '').join('') : '카페';
-  return L.divIcon({ className: `pin pin-${k}${on ? ' is-on' : ''}`, iconSize: null, html: `<b>${esc(label)}</b>` });
+  const style = color ? ` style="--g:${esc(color)}"` : '';
+  const mine = state.reviewed.has(c.id) ? ' mine' : '';
+  return L.divIcon({ className: `pin pin-${k}${on ? ' is-on' : ''}${mine}`, iconSize: null, html: `<b${style}>${esc(label)}</b>` });
 }
 
 function drawMap() {
@@ -163,9 +204,10 @@ function drawMap() {
     g.cafes.forEach(c => pins.set(c.id, c));
     const open = state.open && state.cache.get(state.open);
     if (open) pins.set(open.id, open);
+    const gc = g.kind === 'shared' ? state.shared.color : g.list?.color;
     pins.forEach(c => {
       const on = state.open === c.id;
-      L.marker([c.lat, c.lng], { icon: pinIcon(c, on), zIndexOffset: on ? 1000 : 0 })
+      L.marker([c.lat, c.lng], { icon: pinIcon(c, on, gc), zIndexOffset: on ? 1000 : 0 })
         .on('click', () => openCafe(c.id))
         .addTo(pinLayer);
     });
@@ -192,9 +234,10 @@ function drawMap() {
     if (pins.has(c.id)) return;
     // 점은 지도 위 그림이라 클릭이 지도까지 올라가면 바로 닫혀 버림 → bubblingMouseEvents 끔
     // 다시 그리는 건 클릭 처리가 끝난 다음에
+    const mine = state.reviewed.has(c.id);
     L.circleMarker([c.lat, c.lng], {
-      renderer: dotRenderer, radius: 6, weight: 2, bubblingMouseEvents: false,
-      color: '#211a15', fillColor: '#fffaf0', fillOpacity: 1
+      renderer: dotRenderer, radius: mine ? 8 : 6, weight: mine ? 3 : 2, bubblingMouseEvents: false,
+      color: '#211a15', fillColor: mine ? '#f2c230' : '#fffaf0', fillOpacity: 1
     }).on('click', () => setTimeout(() => openCafe(c.id))).addTo(dotLayer);
   });
 }
@@ -235,41 +278,13 @@ function itemHTML(c) {
   const where = [s && esc(s.name) + '역', c.walk && `도보 ${esc(c.walk)}분`].filter(Boolean).join(' ');
   const score = c.review_count
     ? `<b class="n">★ ${Number(c.avg_rating).toFixed(1)}</b> 후기 ${c.review_count}`
-    : '아직 후기 없음';
+    : '아직 후기가 없어요';
   return `<li><button type="button" class="item${c.types?.length ? '' : ' plain'}" data-id="${esc(c.id)}">
-    ${(c.types || []).map(t => `<i class="tag tag-${TYPES[t]?.key}">${esc(t)}</i>`).join('')}
+    ${(c.types || []).map(t => `<i class="tag tag-${TYPES[t]?.key}">${esc(t)}</i>`).join('')}${state.reviewed.has(c.id) ? '<i class="tag tag-mine">내 후기</i>' : ''}
     <strong>${esc(c.name)}</strong>
     <small>${where}${where ? ' · ' : ''}${score}</small>
     ${c.note ? `<p>${esc(c.note)}</p>` : ''}
   </button></li>`;
-}
-
-function groupBarHTML() {
-  const g = groupView();
-  if (!g) return '';
-  if (g.kind === 'shared') {
-    const sh = state.shared;
-    return `<li class="gbar shared">
-      <p>${Reviews.markHTML(sh.mark)}<b>${esc(sh.nickname || '누군가')}</b> 님이 모은 그룹</p>
-      <div>
-        <button type="button" data-g="copy">내 그룹으로 담기</button>
-        <button type="button" data-g="close-shared" class="ghost">닫기</button>
-      </div>
-    </li>`;
-  }
-  if (!Reviews.me().profile) {
-    return '<li class="gbar"><p>로그인하면 카페를 그룹에 모아 두고 친구한테 링크로 보낼 수 있어.</p><div><button type="button" data-g="login">카카오로 시작</button></div></li>';
-  }
-  const l = g.list;
-  if (!l) return '';
-  return `<li class="gbar">
-    <p>${l.share_id ? '<span class="live">공유 중</span> 링크 있는 사람은 다 볼 수 있어' : '나만 보는 그룹'}</p>
-    <div>
-      <button type="button" data-g="share">${l.share_id ? '링크 다시 보내기' : '링크로 공유'}</button>
-      ${l.share_id ? '<button type="button" data-g="unshare" class="ghost">공유 끄기</button>' : ''}
-      ${l.kind ? '' : '<button type="button" data-g="rename" class="ghost">이름 바꾸기</button><button type="button" data-g="delete" class="ghost danger">지우기</button>'}
-    </div>
-  </li>`;
 }
 
 function renderList() {
@@ -277,11 +292,10 @@ function renderList() {
   const sorted = keepOrder ? rows : sortRows(rows);
   $('#count').textContent = `${title} ${rows.length}${rows.length >= 500 ? '+' : ''}곳`;
 
-  const bar = groupBarHTML();
-  let html = bar + sorted.slice(0, LIST_MAX).map(itemHTML).join('');
-  if (rows.length > LIST_MAX) html += `<li class="more">나머지 ${rows.length - LIST_MAX}곳은 지도에서 콕 눌러 봐</li>`;
+  let html = sorted.slice(0, LIST_MAX).map(itemHTML).join('');
+  if (rows.length > LIST_MAX) html += `<li class="more">나머지 ${rows.length - LIST_MAX}곳은 지도에서 콕 눌러 보세요</li>`;
   if (!rows.length && groupView()) {
-    html = bar + (Reviews.me().profile || state.shared ? '<li class="empty">아직 비어 있어. 카페를 열고 "담기"를 눌러 봐.</li>' : '');
+    html = '<li class="empty">아직 비어 있어요. 카페를 열고 ♥︎를 눌러 담아 보세요.</li>';
   } else if (!rows.length) {
     html = state.results
       ? '<li class="empty">그런 이름의 카페는 못 찾았어요.</li>'
@@ -315,15 +329,20 @@ function stationOptions() {
 function renderChips() {
   const box = $('#chip-list');
   const input = $('#q');
-  input.hidden = state.mode === 'group';
-  if (state.mode === 'group') {
-    if (!Reviews.me().profile) {
-      box.innerHTML = '<button type="button" class="chip" data-g="login">로그인하고 그룹 만들기</button>';
+  const g = groupView();
+  input.hidden = !!g;
+  if (g) {
+    if (g.kind === 'shared') {
+      const sh = state.shared;
+      box.innerHTML = `<button type="button" class="chip chip-back" data-g="close-shared"${sh.color ? ` style="--g:${esc(sh.color)}"` : ''}>‹ ${Reviews.markHTML(sh.mark)}${esc(sh.nickname || '누군가')}의 ${esc(Lists.label(sh))}</button>
+        <button type="button" class="chip chip-act" data-g="copy">내 그룹으로 담기</button>`;
       return;
     }
-    box.innerHTML = state.myLists.map(l => `<button type="button" class="chip chip-${l.kind || 'mine'}${state.list === l.id ? ' on' : ''}" data-list="${esc(l.id)}">
-      ${esc(l.name)}<em>${l.items.length}</em>${l.share_id ? '<small>공유</small>' : ''}</button>`).join('') +
-      '<button type="button" class="chip chip-new" data-g="new">+ 새 그룹</button>';
+    const l = g.list;
+    box.innerHTML = `<button type="button" class="chip chip-back" data-g="close-group"${l?.color ? ` style="--g:${esc(l.color)}"` : ''}>‹ ${esc(g.title)}</button>` + (l ? `
+      <button type="button" class="chip chip-act" data-g="share">${l.share_id ? '링크 다시 보내기' : '링크 공유'}</button>
+      ${l.share_id ? '<button type="button" class="chip chip-ghost" data-g="unshare">공유 끄기</button>' : ''}
+      ${l.kind ? '' : '<button type="button" class="chip chip-ghost" data-g="rename">이름 바꾸기</button><button type="button" class="chip chip-ghost danger" data-g="delete">지우기</button>'}` : '');
     return;
   }
   input.placeholder = state.mode === 'type' ? '카페 이름' : '역 이름';
@@ -347,32 +366,33 @@ function renderChips() {
 function setMode(m) {
   state.mode = m;
   state.shared = null;
+  state.group = null;
   document.querySelectorAll('.mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
-  if (m === 'group') {
-    closeCafe(false);
-    loadLists();
-  }
   render();
 }
 
 // ---------- 그룹 ----------
 
-async function loadLists(selectId) {
-  if (!Reviews.me().profile) { state.myLists = []; state.list = null; state.groupCafes = []; render(); return; }
-  try {
-    state.myLists = await Lists.mine();
-  } catch (e) { console.error(e); state.myLists = []; }
-  const keep = selectId || state.list;
-  state.list = state.myLists.some(l => l.id === keep) ? keep : state.myLists[0]?.id || null;
-  await showList(state.list, !!selectId);
-}
-
-async function showList(id, fit = true) {
-  state.list = id;
+// 내 프로필에서 그룹을 고르면 지도에 그 그룹 카페만
+async function openGroup(id, { fit = true, sheet = true } = {}) {
+  await refreshMyLists();
+  state.group = id;
+  state.shared = null;
+  state.results = null;
+  state.station = 'all';
+  if (fit) closeCafe(false);
   const l = currentList();
   try { state.groupCafes = l ? remember(await Cafes.byIds(l.items)) : []; } catch (e) { console.error(e); state.groupCafes = []; }
+  if (sheet) setSheet('half');
   render();
-  if (fit && state.groupCafes.length) fitTo(state.groupCafes, 16);
+  // 목록이 절반 올라온 뒤에 맞춰야 핀이 목록 뒤에 안 숨음
+  if (fit && state.groupCafes.length) setTimeout(() => fitTo(state.groupCafes, 16), 300);
+}
+
+function closeGroup() {
+  state.group = null;
+  state.groupCafes = [];
+  render();
 }
 
 async function openShared(sid) {
@@ -394,19 +414,12 @@ function closeShared() {
 async function onGroupAction(act) {
   const l = currentList();
   try {
-    if (act === 'login') return Reviews.member({ group: '1' }, () => setMode('group'));
-    if (act === 'new') {
-      const name = prompt('새 그룹 이름 (20자까지)');
-      if (!name?.trim()) return;
-      const made = await Lists.create(name);
-      await loadLists(made.id);
-      return;
-    }
     if (act === 'share' && l) {
       const sid = await Lists.share(l.id);
       l.share_id = sid;
       render();
-      return Lists.sendLink(Lists.linkTo({ list: sid }), `카페인 아카이브 · ${l.name}`);
+      return Lists.sendLink(Lists.linkTo({ list: sid }), `카페인 아카이브 · ${Lists.label(l)}`,
+        `제가 모은 카페 그룹 "${Lists.label(l)}"이에요. ${l.items.length}곳 담겨 있어요.`);
     }
     if (act === 'unshare' && l) {
       if (!confirm('공유를 끌까요? 보냈던 링크는 더 이상 안 열려요.')) return;
@@ -418,46 +431,51 @@ async function onGroupAction(act) {
       const name = prompt('그룹 이름', l.name);
       if (!name?.trim() || name.trim() === l.name) return;
       await Lists.rename(l.id, name);
-      return loadLists(l.id);
+      return openGroup(l.id, { fit: false, sheet: false });
     }
     if (act === 'delete' && l) {
       if (!confirm(`"${l.name}" 그룹을 지울까요? 담긴 카페 목록도 같이 없어져요.`)) return;
       await Lists.remove(l.id);
-      state.list = null;
-      return loadLists();
+      await refreshMyLists();
+      return closeGroup();
     }
     if (act === 'copy' && state.shared) {
       const sh = state.shared;
       return Reviews.member({ list: new URL(location.href).searchParams.get('list') || '' }, async () => {
-        const made = await Lists.create(sh.name);
+        const made = await Lists.create(Lists.label(sh));
         for (const c of sh.cafes) await Lists.add(made.id, c.id);
         state.shared = null;
         Reviews.toast('내 그룹에 담았어요');
-        state.mode = 'group';
-        document.querySelectorAll('.mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === 'group'));
-        await loadLists(made.id);
+        await openGroup(made.id);
       });
     }
     if (act === 'close-shared') return closeShared();
+    if (act === 'close-group') return closeGroup();
   } catch (e) {
     console.error(e);
     const m = String(e?.message || e);
-    alert(/too many lists/.test(m) ? '그룹은 30개까지 만들 수 있어요.' : '처리하지 못했어요. 잠시 뒤 다시 해 줘.');
+    alert(/too many lists/.test(m) ? '그룹은 30개까지 만들 수 있어요.' : '처리하지 못했어요. 잠시 뒤 다시 해 주세요.');
   }
 }
 
+// ♥︎: 아직 아무 데도 안 담긴 카페면 ♥ 그룹에 바로 담고, 담기 창에서 다른 그룹도 고르게
 function saveCafe(id) {
   const c = state.cache.get(id);
   if (!c) return;
-  Reviews.member({ save: id }, () => Lists.openPicker(c, () => {
-    if (state.mode === 'group') loadLists();
-  }));
+  Reviews.member({ save: id }, () => Lists.openPicker(c, async () => {
+    await refreshMyLists();
+    paintHeart();
+    if (state.group) openGroup(state.group, { fit: false, sheet: false });
+  }, { heartFirst: true }));
 }
 
 function shareCafe(id) {
   const c = state.cache.get(id);
   if (!c) return;
-  Lists.sendLink(Lists.linkTo({ cafe: id }), `${c.name} · 카페인 아카이브`);
+  const s = stationById(c.station_id);
+  const where = s ? ` (${s.name}역${c.walk ? ` 도보 ${c.walk}분` : ''})` : '';
+  const kind = c.types?.length ? ` ${c.types.join('·')} 카페예요.` : '';
+  Lists.sendLink(Lists.linkTo({ cafe: id }), `${c.name} · 카페인 아카이브`, `${c.name}${where}.${kind} 카페인 아카이브에서 봐요.`);
 }
 
 // ---------- 검색 ----------
@@ -484,7 +502,7 @@ function onSearchInput(v) {
       closeCafe(false);
       render();
       if (rows.length) fitTo(rows, 16);
-      $('#sheet').classList.add('full');
+      setSheet('half');
     } catch (e) { console.error(e); }
   }, 300);
 }
@@ -520,7 +538,7 @@ async function pickStation(id) {
   state.shared = null;
   if (state.mode !== 'station') { state.mode = 'station'; document.querySelectorAll('.mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === 'station')); }
   closeCafe(false);
-  $('#sheet').classList.remove('full');
+  setSheet('peek');
   state.stationCafes = [];
   if (id !== 'all') {
     const s = stationById(id);
@@ -559,11 +577,13 @@ async function openCafe(id) {
 
   const s = stationById(c.station_id);
   const q = encodeURIComponent(`${c.name} ${s ? s.name + '역' : ''}`.trim());
+  const kakao = `https://map.kakao.com/link/search/${q}`;
   const naver = `https://map.naver.com/p/search/${q}`;
-  // 영업시간은 데이터에 없으면 네이버 지도로 넘김 (네이버는 운영시간을 API로 안 줌)
+  // 영업시간은 데이터에 없으면 카카오맵으로 넘김
   const hours = c.hours
     ? esc(c.hours)
-    : `<a class="ext" href="${naver}" target="_blank" rel="noopener">네이버 지도에서 보기</a>`;
+    : `<a class="ext" href="${kakao}" target="_blank" rel="noopener">카카오맵에서 보기</a>`;
+  const saved = isSaved(c.id);
   const rows = [
     s && ['역', esc(`${s.name}역${c.walk ? ` 도보 ${c.walk}분` : ''}`)],
     c.address && ['주소', esc(c.address)],
@@ -574,27 +594,31 @@ async function openCafe(id) {
   const d = $('#detail');
   d.innerHTML = `
     <button type="button" class="x" aria-label="닫기">×</button>
-    ${(c.types || []).map(t => `<i class="tag tag-${TYPES[t]?.key}">${esc(t)}</i>`).join('')}
-    <h2>${esc(c.name)}</h2>
+    <div class="dhead">
+      <div class="dname">
+        ${(c.types || []).map(t => `<i class="tag tag-${TYPES[t]?.key}">${esc(t)}</i>`).join('')}
+        <h2>${esc(c.name)}</h2>
+      </div>
+      <div class="dicons">
+        <button type="button" class="ic heart${saved ? ' on' : ''}" data-cafe-act="save" aria-pressed="${saved}" aria-label="${saved ? '♥︎에 담겨 있어요' : '♥︎에 담기'}">${saved ? '♥\uFE0E' : '♡\uFE0E'}</button>
+        <button type="button" class="ic" data-cafe-act="share" aria-label="링크 공유">${ICON.share}</button>
+      </div>
+    </div>
     <dl>${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>
     ${c.note ? `<p class="note">${esc(c.note)}</p>` : ''}
     ${c.sample ? '<p class="sample">예시 데이터예요. 실제 카페로 바꿔 주세요.</p>' : ''}
-    ${!c.types?.length ? '<p class="untagged">아직 카공인지 느좋인지 몰라요. 다녀왔으면 후기로 알려 줘.</p>' : ''}
+    ${!c.types?.length ? '<p class="untagged">아직 카공인지 느좋인지 몰라요. 다녀왔다면 후기로 알려 주세요.</p>' : ''}
     ${isAdmin() ? adminHTML(c) : ''}
     <section class="rv" id="rv"><p class="rv-none">후기 불러오는 중</p></section>
     <button type="button" class="write-btn" id="write-btn">이 카페 후기 남기기</button>
-    <div class="acts">
-      <button type="button" data-cafe-act="save">담기</button>
-      <button type="button" data-cafe-act="share">공유</button>
-    </div>
     <div class="go">
+      <a href="${kakao}" target="_blank" rel="noopener">카카오맵</a>
       <a href="${naver}" target="_blank" rel="noopener">네이버 지도</a>
-      <a href="https://map.kakao.com/link/search/${q}" target="_blank" rel="noopener">카카오맵</a>
     </div>`;
   Reviews.fillSummary(c.id, $('#rv'), $('#write-btn'));
   d.hidden = false;
   d.scrollTop = 0;
-  $('#sheet').classList.remove('full');
+  setSheet('peek');
   panAbove([c.lat, c.lng], Math.max(map.getZoom(), 16));
 }
 
@@ -607,7 +631,9 @@ function closeCafe(redraw = true) {
 
 // 후기를 쓰거나 운영자가 표시를 바꾸면 그 카페 정보와 분류 핀을 다시 받음
 async function refreshCafe(id) {
-  if (state.mode === 'group') loadLists();
+  refreshMyLists().then(paintHeart);
+  await refreshReviewed();
+  if (state.group) openGroup(state.group, { fit: false, sheet: false });
   try {
     await reloadClassified();
     const c = await Cafes.byId(id);
@@ -639,7 +665,7 @@ async function startWrite(cafeId) {
 //   ?cafe=id   공유받은 카페 열기
 //   ?list=sid  공유받은 그룹 열기
 //   ?write=id  카카오 로그인에서 돌아옴 → 쓰던 후기 이어서
-//   ?save=id   카카오 로그인에서 돌아옴 → 그룹 담기 이어서
+//   ?save=id   카카오 로그인에서 돌아옴 → ♥︎ 담기 이어서
 //   ?group=1   카카오 로그인에서 돌아옴 → 그룹 화면으로
 async function resumeWrite() {
   const p = new URL(location.href).searchParams;
@@ -652,7 +678,7 @@ async function resumeWrite() {
     await openCafe(save);
     return saveCafe(save);
   }
-  if (p.get('group')) return setMode('group');
+  if (p.get('group')) return Me.open();
   if (cafe) return openCafe(cafe);
   if (Reviews.me().user && !Reviews.me().profile) Reviews.openAccount();
 }
@@ -661,17 +687,52 @@ async function resumeWrite() {
 function paintMe({ user, profile }) {
   const b = $('#me');
   b.classList.toggle('in', !!user);
-  b.innerHTML = profile ? Reviews.markHTML(profile.mark) : user ? '이름?' : '로그인';
+  b.innerHTML = profile ? Reviews.markHTML(profile.mark) : user ? '이름을 정해요' : '로그인';
   b.setAttribute('aria-label', profile ? `내 프로필: ${profile.nickname}` : '로그인');
 }
-Reviews.onChange(s => {
+Reviews.onChange(async s => {
   paintMe(s);
-  if (state.mode === 'group') loadLists();
+  await Promise.all([refreshMyLists(), refreshReviewed()]);
+  drawMap();
+  renderList();
+  if (state.group && !s.profile) closeGroup();
+  else if (state.group) openGroup(state.group, { fit: false, sheet: false });
   if (state.open) openCafe(state.open);
 });
-$('#me').addEventListener('click', () => Reviews.openAccount());
+// 닉네임까지 있으면 내 프로필(그룹·설정), 아니면 로그인이나 닉네임 정하기
+$('#me').addEventListener('click', () => Reviews.me().profile ? Me.open() : Reviews.openAccount());
+
+window.App = { openGroup, refreshMyLists, myLists: () => state.myLists };
+
+// 로고: 검색·필터·역·그룹·열린 카페를 다 풀고 처음 지도로
+
+function goHome() {
+  if (Reviews.isOpen()) Reviews.close();
+  closeCafe(false);
+  state.type = 'all';
+  state.station = 'all';
+  state.results = null;
+  state.shared = null;
+  state.group = null;
+  state.groupCafes = [];
+  state.stationCafes = [];
+  state.query = { type: '', station: '' };
+  state.mode = 'type';
+  document.querySelectorAll('.mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === 'type'));
+  $('#q').value = '';
+  $('#q').blur();
+  setSheet('peek');
+  if (location.search) history.replaceState(null, '', location.pathname);
+  startView();
+  refreshView();
+}
 
 // ---------- 이벤트 ----------
+
+$('#home').addEventListener('click', e => {
+  e.preventDefault();
+  goHome();
+});
 
 document.querySelectorAll('.mode button').forEach(b =>
   b.addEventListener('click', () => setMode(b.dataset.mode)));
@@ -699,7 +760,6 @@ $('#chip-list').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
   if (b.dataset.g) return onGroupAction(b.dataset.g);
-  if (b.dataset.list) { closeCafe(false); return showList(b.dataset.list); }
   if (b.dataset.type) {
     state.type = b.dataset.type;
     state.shared = null;
@@ -726,7 +786,10 @@ $('#detail').addEventListener('click', async e => {
   if (e.target.closest('.x')) closeCafe();
   if (e.target.closest('#write-btn') && state.open) startWrite(state.open);
   const ca = e.target.closest('[data-cafe-act]');
-  if (ca && state.open) return ca.dataset.cafeAct === 'save' ? saveCafe(state.open) : shareCafe(state.open);
+  if (ca && state.open) {
+    const act = ca.dataset.cafeAct;
+    return act === 'save' ? saveCafe(state.open) : shareCafe(state.open);
+  }
 
   const tb = e.target.closest('[data-admin-type]');
   const hb = e.target.closest('[data-admin-hide]');
@@ -757,19 +820,27 @@ document.addEventListener('keydown', e => {
 });
 map.on('click', () => closeCafe());
 
-// 목록 시트: 탭하면 펼치고 접기, 위아래로 밀어도 됨
-const sheet = $('#sheet');
+// 목록 시트: 처음엔 손잡이만. 누르면 절반 ↔ 접기, 위로 밀면 화면 가득, 아래로 밀면 손잡이만
 const handle = $('#handle');
 let startY = null;
-handle.addEventListener('click', () => sheet.classList.toggle('full'));
-handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
-handle.addEventListener('touchend', e => {
+handle.addEventListener('pointerdown', e => {
+  startY = e.clientY;
+  handle.setPointerCapture?.(e.pointerId);
+});
+handle.addEventListener('pointerup', e => {
   if (startY === null) return;
-  const dy = e.changedTouches[0].clientY - startY;
+  const dy = e.clientY - startY;
   startY = null;
-  if (Math.abs(dy) < 30) return;
-  e.preventDefault();
-  sheet.classList.toggle('full', dy < 0);
+  if (dy < -30) return setSheet('full');
+  if (dy > 30) return setSheet('peek');
+  const now = sheetState();
+  setSheet(now === 'peek' ? 'half' : now === 'full' ? 'half' : 'peek');
+});
+handle.addEventListener('pointercancel', () => { startY = null; });
+handle.addEventListener('click', e => { if (e.detail === 0) setSheet(sheetState() === 'peek' ? 'half' : 'peek'); });
+handle.addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp') { e.preventDefault(); setSheet(sheetState() === 'peek' ? 'half' : 'full'); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); setSheet(sheetState() === 'full' ? 'half' : 'peek'); }
 });
 
 // 내 위치

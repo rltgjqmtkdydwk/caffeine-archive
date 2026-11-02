@@ -11,17 +11,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script>try { var f = localStorage.getItem('caffeine-fs'); if (f) document.documentElement.dataset.fs = f; } catch (e) {}</script>
 </head>
-<body>
+<body data-sheet="peek">
 
 <header class="top">
-  <h1 class="logo">카페인<span>아카이브</span></h1>
+  <h1 class="logo"><a href="./" id="home" aria-label="카페인 아카이브, 처음 화면으로">카페인<span>아카이브</span></a></h1>
   <div class="top-r">
     <button type="button" class="me" id="me" aria-label="로그인">로그인</button>
     <div class="mode">
       <button type="button" data-mode="type" class="on">종류</button>
       <button type="button" data-mode="station">역</button>
-      <button type="button" data-mode="group">그룹</button>
     </div>
   </div>
 </header>
@@ -40,7 +40,7 @@
 </button>
 
 <section class="sheet" id="sheet">
-  <button type="button" class="handle" id="handle"><span></span><em id="count">불러오는 중</em></button>
+  <button type="button" class="handle" id="handle" aria-label="목록 열기"><span></span><em id="count">불러오는 중</em><small>눌러서 목록 보기</small></button>
   <ul class="list" id="list"></ul>
 </section>
 
@@ -51,9 +51,11 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="config.js"></script>
+<script src="avatars.js"></script>
 <script src="reviews.js"></script>
 <script src="cafes.js"></script>
 <script src="lists.js"></script>
+<script src="me.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
