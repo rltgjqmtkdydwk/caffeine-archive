@@ -453,7 +453,7 @@ function saveCafe(id) {
     await refreshMyLists();
     paintHeart();
     if (state.group) openGroup(state.group, { fit: false, sheet: false });
-  }));
+  }, { heartFirst: true }));
 }
 
 function shareCafe(id) {
@@ -616,6 +616,7 @@ function closeCafe(redraw = true) {
 // 후기를 쓰거나 운영자가 표시를 바꾸면 그 카페 정보와 분류 핀을 다시 받음
 async function refreshCafe(id) {
   refreshMyLists().then(paintHeart);
+  await refreshReviewed();
   if (state.group) openGroup(state.group, { fit: false, sheet: false });
   try {
     await reloadClassified();
@@ -675,7 +676,9 @@ function paintMe({ user, profile }) {
 }
 Reviews.onChange(async s => {
   paintMe(s);
-  await refreshMyLists();
+  await Promise.all([refreshMyLists(), refreshReviewed()]);
+  drawMap();
+  renderList();
   if (state.group && !s.profile) closeGroup();
   else if (state.group) openGroup(state.group, { fit: false, sheet: false });
   if (state.open) openCafe(state.open);

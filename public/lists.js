@@ -19,9 +19,11 @@ window.Lists = (() => {
   function palette(lists = []) {
     return [...new Set([...BASE_COLORS, ...customColors(), ...lists.map(l => l.color).filter(Boolean)])];
   }
-  // 색을 안 고른 그룹: 카공은 올리브, 느좋은 다홍, 나머지는 만든 순서대로 기본색 돌려 쓰기
+  // 색을 안 고른 그룹: 하트는 분홍빛 빨강, 카공은 올리브, 느좋은 다홍, 나머지는 만든 순서대로 기본색 돌려 쓰기
+  const HEART_COLOR = '#d1495b';
   function colorOf(l, i = 0) {
     if (l?.color) return l.color;
+    if (l?.kind === 'heart') return HEART_COLOR;
     if (l?.kind === 'study') return BASE_COLORS[0];
     if (l?.kind === 'mood') return BASE_COLORS[1];
     return BASE_COLORS[(i + 2) % BASE_COLORS.length];
@@ -37,9 +39,15 @@ window.Lists = (() => {
       try { a = JSON.parse(localStorage.getItem(LS)); } catch {}
       if (!Array.isArray(a)) {
         a = [
+          { id: 'd-heart', name: '하트', kind: 'heart', share_id: null, items: [] },
           { id: 'd-study', name: '카공', kind: 'study', share_id: null, items: [] },
           { id: 'd-mood', name: '느좋', kind: 'mood', share_id: null, items: [] }
         ];
+        demo.save(a);
+      }
+      // 예전 데모 데이터에 하트 그룹이 없으면 앞에 넣어 줌
+      if (!a.some(l => l.kind === 'heart')) {
+        a.unshift({ id: 'd-heart', name: '하트', kind: 'heart', share_id: null, items: [] });
         demo.save(a);
       }
       return a;
@@ -58,12 +66,15 @@ window.Lists = (() => {
       const { error } = await db.rpc('ensure_default_lists');
       if (!error) ensured = true;
     }
-    const { data, error } = await db.from('lists')
-      .select('id,name,kind,color,share_id,created_at,list_items(cafe_id,added_at)')
-      .order('created_at', { ascending: true });
+    const cols = 'id,name,kind,share_id,created_at,list_items(cafe_id,added_at)';
+    let { data, error } = await db.from('lists').select('color,' + cols).order('created_at', { ascending: true });
+    // lists.sql을 아직 새로 안 돌려서 color 열이 없으면 색 없이라도 불러옴
+    if (error && noColorColumn(error)) {
+      ({ data, error } = await db.from('lists').select(cols).order('created_at', { ascending: true }));
+    }
     if (error) throw error;
-    // 기본 그룹(카공·느좋)이 맨 앞
-    const rank = l => l.kind === 'study' ? 0 : l.kind === 'mood' ? 1 : 2;
+    // 기본 그룹(하트·카공·느좋)이 맨 앞
+    const rank = l => ({ heart: 0, study: 1, mood: 2 })[l.kind] ?? 3;
     return data
       .map(l => ({
         ...l,
@@ -72,6 +83,8 @@ window.Lists = (() => {
       .sort((a, b) => rank(a) - rank(b))
       .map((l, i) => ({ ...l, color: colorOf(l, i) }));
   }
+
+  const noColorColumn = e => e?.code === '42703' || e?.code === 'PGRST204' || /color/.test(e?.message || '');
 
   async function create(name, color) {
     name = name.trim().slice(0, MAX_NAME);
@@ -83,7 +96,10 @@ window.Lists = (() => {
       return l;
     }
     const db = await Reviews.db();
-    const { data, error } = await db.from('lists').insert({ name, color }).select('id,name,kind,color,share_id').single();
+    let { data, error } = await db.from('lists').insert({ name, color }).select('id,name,kind,color,share_id').single();
+    if (error && noColorColumn(error)) {
+      ({ data, error } = await db.from('lists').insert({ name }).select('id,name,kind,share_id').single());
+    }
     if (error) throw error;
     return { ...data, items: [] };
   }
@@ -102,6 +118,7 @@ window.Lists = (() => {
     if (!LIVE) return demo.edit(id, l => { l.color = color; });
     const db = await Reviews.db();
     const { error } = await db.from('lists').update({ color }).eq('id', id);
+    if (error && noColorColumn(error)) throw new Error('색을 저장하려면 Supabase에서 lists.sql을 한 번 더 실행해야 해요');
     if (error) throw error;
   }
 
@@ -163,7 +180,7 @@ window.Lists = (() => {
   function syncFromReview(cafeId, before, after) {
     if (LIVE) return;
     const a = demo.all();
-    ['study', 'mood'].forEach(k => {
+    ['study', 'mood'].forEach(k => {   // 하트는 후기와 상관없음
       const had = before.includes(k), has = after.includes(k);
       if (had === has) return;
       const l = a.find(x => x.kind === k);
@@ -208,7 +225,7 @@ window.Lists = (() => {
     return `
       <header class="w-head">
         <button type="button" class="w-x" data-act="close" aria-label="닫기">×</button>
-        <small>그룹에 담기</small>
+        <small>${picking.added ? '하트에 담았어 · 다른 그룹에도 담을 수 있어' : '그룹에 담기'}</small>
         <h2>${esc(cafe.name)}</h2>
       </header>
       <div class="w-body">
@@ -224,9 +241,26 @@ window.Lists = (() => {
       </footer>`;
   }
 
-  async function openPicker(cafe, onChange) {
-    const lists = await mine();
-    picking = { cafe, lists, onChange };
+  // 하트 버튼: 아직 아무 데도 안 담긴 카페면 하트 그룹에 바로 담고, 다른 그룹도 고를 수 있게 창을 띄움
+  async function openPicker(cafe, onChange, { heartFirst = false } = {}) {
+    let lists;
+    try {
+      lists = await mine();
+    } catch (err) {
+      console.error(err);
+      return Reviews.toast('그룹을 못 불러왔어요. 잠시 뒤 다시 해 줘');
+    }
+    let added = false;
+    const heart = lists.find(l => l.kind === 'heart');
+    if (heartFirst && heart && !lists.some(l => l.items.includes(cafe.id))) {
+      try {
+        await add(heart.id, cafe.id);
+        heart.items.unshift(cafe.id);
+        added = true;
+        onChange?.();
+      } catch (err) { console.error(err); }
+    }
+    picking = { cafe, lists, onChange, added };
     Reviews.show(pickerHTML(), 'picker');
   }
 
@@ -247,6 +281,7 @@ window.Lists = (() => {
     const m = String(err?.message || err);
     if (/too many lists/.test(m)) return '그룹은 30개까지 만들 수 있어요.';
     if (/list is full/.test(m)) return '그룹 하나에 500곳까지 담을 수 있어요.';
+    if (/permission|row-level|violates check/.test(m) || err?.code === '42501') return 'DB 설정이 아직이에요. Supabase에서 lists.sql을 다시 실행해 줘.';
     return '저장하지 못했어요. 잠시 뒤 다시 해 줘.';
   }
 
