@@ -704,7 +704,34 @@ Reviews.onChange(async s => {
 });
 $('#me').addEventListener('click', () => Reviews.openAccount());
 
+// 로고: 검색·필터·역·그룹·열린 카페를 다 풀고 처음 지도로
+const HOME_VIEW = [[37.556, 126.99], 13];
+function goHome() {
+  if (Reviews.isOpen()) Reviews.close();
+  closeCafe(false);
+  state.type = 'all';
+  state.station = 'all';
+  state.results = null;
+  state.shared = null;
+  state.stationCafes = [];
+  state.query = { type: '', station: '' };
+  state.mode = 'type';
+  document.querySelectorAll('.mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === 'type'));
+  $('#q').value = '';
+  $('#q').blur();
+  setSheet('peek');
+  if (location.search) history.replaceState(null, '', location.pathname);
+  if (state.classified.length) fitTo(state.classified, 15);
+  else map.setView(...HOME_VIEW);
+  refreshView();
+}
+
 // ---------- 이벤트 ----------
+
+$('#home').addEventListener('click', e => {
+  e.preventDefault();
+  goHome();
+});
 
 document.querySelectorAll('.mode button').forEach(b =>
   b.addEventListener('click', () => setMode(b.dataset.mode)));
