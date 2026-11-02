@@ -16,19 +16,19 @@ window.Reviews = (() => {
 
   // 질문 목록. rating만 필수, 나머지는 선택
   const Q = [
-    { k: 'good_for', label: '여기 뭐 하기 좋아?', multi: 2, big: true, note: '고르면 내 그룹에도 담겨', opts: [['study', '카공'], ['mood', '느좋']] },
+    { k: 'good_for', label: '여기 뭐 하기 좋아요?', multi: 2, big: true, note: '고르면 내 그룹에도 담겨요', opts: [['study', '카공'], ['mood', '느좋']] },
     { group: '공간' },
     { k: 'seats', label: '자리 수', opts: [[1, '10석 안쪽'], [2, '10–30석'], [3, '30–60석'], [4, '60석 넘게']] },
-    { k: 'noise', label: '소음', opts: [[1, '도서관'], [2, '잔잔'], [3, '대화 소리'], [4, '시끌벅적']] },
-    { k: 'outlets', label: '콘센트', opts: [[1, '거의 없음'], [2, '몇 자리'], [3, '넉넉']] },
+    { k: 'noise', label: '소음', opts: [[1, '도서관 같아요'], [2, '잔잔해요'], [3, '대화 소리 들려요'], [4, '시끌벅적해요']] },
+    { k: 'outlets', label: '콘센트', opts: [[1, '거의 없어요'], [2, '몇 자리 있어요'], [3, '넉넉해요']] },
     { group: '시간' },
-    { k: 'time_limit', label: '이용 시간 제한', opts: [[0, '없음'], [2, '2시간'], [3, '3시간'], [4, '4시간 이상']] },
+    { k: 'time_limit', label: '이용 시간 제한', opts: [[0, '없어요'], [2, '2시간'], [3, '3시간'], [4, '4시간 이상']] },
     { k: 'close_at', label: '마감', opts: [[1, '9시 전'], [2, '10시'], [3, '11시'], [4, '자정'], [5, '새벽·24시']] },
     { group: '메뉴' },
-    { k: 'dessert', label: '디저트 종류', opts: [[0, '없음'], [1, '1–3개'], [2, '4–9개'], [3, '10개 이상']] },
-    { k: 'roasting', label: '원두 로스팅', opts: [[true, '직접 볶음'], [false, '아님']] },
+    { k: 'dessert', label: '디저트 종류', opts: [[0, '없어요'], [1, '1–3개'], [2, '4–9개'], [3, '10개 이상']] },
+    { k: 'roasting', label: '원두 로스팅', opts: [[true, '직접 볶아요'], [false, '아니에요']] },
     { group: '분위기' },
-    { k: 'quirk', label: '개성', opts: [[1, '무난함'], [2, '개성 있음'], [3, '여긴 진짜 특이함']] },
+    { k: 'quirk', label: '개성', opts: [[1, '무난해요'], [2, '개성 있어요'], [3, '여긴 진짜 특이해요']] },
     { k: 'styles', label: '추구미', multi: 2, note: '2개까지', opts: STYLES }
   ];
   const QS = Q.filter(q => q.k);
@@ -402,7 +402,7 @@ window.Reviews = (() => {
     const r = draft.rating || 0;
     return `<div class="w-stars" role="radiogroup" aria-label="별점">
       ${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="${r === n}" aria-label="${n}점" data-act="star" data-v="${n}" class="${n <= r ? 'on' : ''}">★</button>`).join('')}
-      <span class="w-star-word">${r ? `${r}점 · ${STAR_WORDS[r]}` : '눌러서 별점 주기'}</span>
+      <span class="w-star-word">${r ? `${r}점 · ${STAR_WORDS[r]}` : '눌러서 별점을 주세요'}</span>
     </div>`;
   }
 
@@ -426,7 +426,7 @@ window.Reviews = (() => {
           <span class="w-label">별점 <small class="req">필수</small></span>
           <div id="stars">${starsHTML()}</div>
         </div>
-        <p class="w-hint">여기부터는 아는 것만 톡톡. 모르면 비워 두고, 한 번 더 누르면 취소.</p>
+        <p class="w-hint">여기부터는 아는 것만 톡톡 눌러 주세요. 모르면 비워 두고, 한 번 더 누르면 취소돼요.</p>
         ${qs}
         <p class="w-group">한마디</p>
         <label class="w-text">
@@ -583,7 +583,7 @@ window.Reviews = (() => {
     if (act === 'del-review') {
       if (!confirm('이 카페에 남긴 내 후기를 지울까요?')) return;
       try { await remove(current.id); close(); toast('지웠어요'); onDone?.(); }
-      catch (err) { console.error(err); fail('지우지 못했어요.'); }
+      catch (err) { console.error(err); fail('지우지 못했어요. 잠시 뒤 다시 해 주세요.'); }
       return;
     }
 
@@ -597,7 +597,7 @@ window.Reviews = (() => {
         await save(current.id, row);
         close();
         const names = (row.good_for || []).map(k => k === 'study' ? '카공' : '느좋');
-        toast(names.length ? `후기 올렸어요. ${names.join('·')} 그룹에도 담았어` : '후기 올렸어요. 고마워요');
+        toast(names.length ? `후기 올렸어요. ${names.join('·')} 그룹에도 담았어요` : '후기 올렸어요. 고마워요');
         onDone?.();
       } catch (err) {
         console.error(err);

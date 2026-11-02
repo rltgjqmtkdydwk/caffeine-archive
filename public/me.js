@@ -108,7 +108,7 @@ window.Me = (() => {
           <i class="tag tag-study">카공</i>
           <strong>벽돌커피</strong>
           <small>홍대입구역 도보 2분 · ★ 4.5 후기 2</small>
-          <p>창가 바 자리가 제일 조용함. 콘센트는 테이블마다 있어.</p>
+          <p>창가 바 자리가 제일 조용해요. 콘센트는 테이블마다 있어요.</p>
         </div>
         <p class="w-hint">이 기기에서만 바뀌어요.</p>
         ${member ? `
@@ -162,12 +162,12 @@ window.Me = (() => {
         await Lists.create(name);
         await App.refreshMyLists();
         await open();
-        return Reviews.toast(`"${name}" 그룹 만들었어`);
+        return Reviews.toast(`"${name}" 그룹을 만들었어요`);
       } catch (err) {
         console.error(err);
         b.disabled = false;
         const m = String(err?.message || '');
-        return Reviews.toast(/too many lists/.test(m) ? '그룹은 30개까지 만들 수 있어요' : /permission|42501/.test(m + err?.code) ? 'DB 설정이 아직이에요 (lists.sql 다시 실행)' : '못 만들었어요. 잠시 뒤 다시 해 줘');
+        return Reviews.toast(/too many lists/.test(m) ? '그룹은 30개까지 만들 수 있어요' : /permission|42501/.test(m + err?.code) ? 'DB 설정이 아직이에요. lists.sql을 다시 실행해 주세요' : '못 만들었어요. 잠시 뒤 다시 해 주세요');
       }
     }
     if (act === 'logout') {

@@ -268,7 +268,7 @@ function itemHTML(c) {
   const where = [s && esc(s.name) + '역', c.walk && `도보 ${esc(c.walk)}분`].filter(Boolean).join(' ');
   const score = c.review_count
     ? `<b class="n">★ ${Number(c.avg_rating).toFixed(1)}</b> 후기 ${c.review_count}`
-    : '아직 후기 없음';
+    : '아직 후기가 없어요';
   return `<li><button type="button" class="item${c.types?.length ? '' : ' plain'}" data-id="${esc(c.id)}">
     ${(c.types || []).map(t => `<i class="tag tag-${TYPES[t]?.key}">${esc(t)}</i>`).join('')}${state.reviewed.has(c.id) ? '<i class="tag tag-mine">내 후기</i>' : ''}
     <strong>${esc(c.name)}</strong>
