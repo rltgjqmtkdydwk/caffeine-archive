@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-sheet="peek">
 
 <header class="top">
   <h1 class="logo">카페인<span>아카이브</span></h1>
@@ -40,7 +40,7 @@
 </button>
 
 <section class="sheet" id="sheet">
-  <button type="button" class="handle" id="handle"><span></span><em id="count">불러오는 중</em></button>
+  <button type="button" class="handle" id="handle" aria-label="목록 열기"><span></span><em id="count">불러오는 중</em><small>눌러서 목록 보기</small></button>
   <ul class="list" id="list"></ul>
 </section>
 

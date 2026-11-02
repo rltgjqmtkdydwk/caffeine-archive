@@ -26,6 +26,11 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, ch =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const wide = () => window.innerWidth >= 860;
+const sheetState = () => document.body.dataset.sheet || 'peek';
+function setSheet(s) {
+  document.body.dataset.sheet = s;
+  $('#handle').setAttribute('aria-label', s === 'peek' ? '목록 열기' : '목록 접기');
+}
 const remember = list => { list.forEach(c => state.cache.set(c.id, c)); return list; };
 const stationById = id => state.stations.find(s => s.id === id);
 const matchesType = c => state.type === 'all' || (c.types || []).includes(state.type);
@@ -484,7 +489,7 @@ function onSearchInput(v) {
       closeCafe(false);
       render();
       if (rows.length) fitTo(rows, 16);
-      $('#sheet').classList.add('full');
+      setSheet('half');
     } catch (e) { console.error(e); }
   }, 300);
 }
@@ -520,7 +525,7 @@ async function pickStation(id) {
   state.shared = null;
   if (state.mode !== 'station') { state.mode = 'station'; document.querySelectorAll('.mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === 'station')); }
   closeCafe(false);
-  $('#sheet').classList.remove('full');
+  setSheet('peek');
   state.stationCafes = [];
   if (id !== 'all') {
     const s = stationById(id);
@@ -594,7 +599,7 @@ async function openCafe(id) {
   Reviews.fillSummary(c.id, $('#rv'), $('#write-btn'));
   d.hidden = false;
   d.scrollTop = 0;
-  $('#sheet').classList.remove('full');
+  setSheet('peek');
   panAbove([c.lat, c.lng], Math.max(map.getZoom(), 16));
 }
 
@@ -757,19 +762,27 @@ document.addEventListener('keydown', e => {
 });
 map.on('click', () => closeCafe());
 
-// 목록 시트: 탭하면 펼치고 접기, 위아래로 밀어도 됨
-const sheet = $('#sheet');
+// 목록 시트: 처음엔 손잡이만. 누르면 절반 ↔ 접기, 위로 밀면 화면 가득, 아래로 밀면 손잡이만
 const handle = $('#handle');
 let startY = null;
-handle.addEventListener('click', () => sheet.classList.toggle('full'));
-handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
-handle.addEventListener('touchend', e => {
+handle.addEventListener('pointerdown', e => {
+  startY = e.clientY;
+  handle.setPointerCapture?.(e.pointerId);
+});
+handle.addEventListener('pointerup', e => {
   if (startY === null) return;
-  const dy = e.changedTouches[0].clientY - startY;
+  const dy = e.clientY - startY;
   startY = null;
-  if (Math.abs(dy) < 30) return;
-  e.preventDefault();
-  sheet.classList.toggle('full', dy < 0);
+  if (dy < -30) return setSheet('full');
+  if (dy > 30) return setSheet('peek');
+  const now = sheetState();
+  setSheet(now === 'peek' ? 'half' : now === 'full' ? 'half' : 'peek');
+});
+handle.addEventListener('pointercancel', () => { startY = null; });
+handle.addEventListener('click', e => { if (e.detail === 0) setSheet(sheetState() === 'peek' ? 'half' : 'peek'); });
+handle.addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp') { e.preventDefault(); setSheet(sheetState() === 'peek' ? 'half' : 'full'); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); setSheet(sheetState() === 'full' ? 'half' : 'peek'); }
 });
 
 // 내 위치
