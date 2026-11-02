@@ -6,17 +6,19 @@
 
 - 빌드 도구 없는 정적 사이트. 사이트 파일은 `public/`에 있고 이 폴더가 서빙 루트. Cloudflare Pages가 이 폴더로 배포(main 푸시 시 자동). GitHub Pages는 꺼 둠
 - `public/app.js` 지도·필터·목록·상세 / `cafes.js` 카페·역 데이터 읽기 / `lists.js` 그룹(담기·공유) / `me.js` 내 프로필(그룹 목록·설정) / `reviews.js` 로그인·프로필·후기 / `style.css` 전부
+- README는 사용자에게 보여 주는 소개글(목적: 카공·느좋 정보를 같이 모으는 지도, 길찾기 앱 아님). 개발 메모는 `docs/dev.md`
 - 카페와 역: Supabase `cafes`, `stations` 표 (서울 카페 공공데이터를 `tools/import_cafes.py`로 넣음). 공개 조회는 `cafes_public` 뷰. 자세한 건 `docs/data.md`
 - `public/data/cafes.json`은 config가 비어 있을 때 쓰는 데모 데이터
 - 후기·프로필: Supabase. 스키마는 `supabase/schema.sql` → `cafes.sql` → `lists.sql` 순서, 키는 `public/config.js` (비어 있으면 localStorage 데모 모드)
 - 카공/느좋: 운영자 지정(`admin_types`, `profiles.is_admin`) 또는 후기 자동 분류(뷰에서 계산)
 - 로그인: 카카오 OAuth(Supabase). 카카오 프로필 정보는 화면에 쓰지 않고 DB에도 남기지 않음. 공개 표시는 사이트 전용 닉네임 + 모양 표시(mark 1–8)
 - 후기는 별점(rating)만 필수, 나머지는 전부 선택. 카페당 사용자당 1개(upsert)
-- 그룹: 사용자별 카페 폴더. 기본 카공·느좋(이름 변경·삭제 불가) + 직접 만든 것. 기본 비공개, 공유하면 `?list=share_id` 링크로 누구나 열람(닉네임만 표시). 카페 하나는 `?cafe=id` 링크
+- 그룹: 사용자별 카페 폴더. 기본 하트·카공·느좋(이름 변경·삭제 불가) + 직접 만든 것. 하트 버튼은 하트 그룹에 바로 담고 담기 창을 띄움. 기본 비공개, 공유하면 `?list=share_id` 링크로 누구나 열람(닉네임만 표시). 카페 하나는 `?cafe=id` 링크
 - 후기에서 카공·느좋을 고르면 내 기본 카공·느좋 그룹에 자동으로 담김(DB 트리거 `sync_review_lists`). 고치면서 빼면 그룹에서도 빠지고, 후기를 지워도 그룹은 그대로
 - 그룹의 카공·느좋은 개인 폴더일 뿐, 지도의 카공·느좋 분류에는 안 섞임
 - 그룹은 상단 토글이 아니라 내 프로필(`me.js`)에서 보고 고름. 그룹마다 색(`lists.color`, 기본 4색 + 사용자가 추가한 색은 그 기기 localStorage). 기본 그룹은 이름은 고정, 색은 변경 가능(트리거 `lists_guard`)
 - 화면: 목록 시트는 3단계(`body[data-sheet]` = peek/half/full). 로고 누르면 처음 화면. 카페 상세는 이름 옆 하트(담기)·공유 아이콘, 카카오맵 버튼이 앞
+- 내가 후기 쓴 카페는 지도 핀에 별 딱지, 점은 노랗게, 목록엔 "내 후기"
 - 설정: 글씨 크기 4단계(`html[data-fs]`, CSS의 `--fs` 배수, 이 기기 localStorage). 헤더·지도 핀은 고정 크기
 
 ## 지켜야 할 것
