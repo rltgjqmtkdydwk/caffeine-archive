@@ -283,8 +283,25 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
   font-size: 26px;
   line-height: 1;
 }
+/* 이름 줄: 왼쪽 이름, 오른쪽 하트·공유 */
+.dhead { display: flex; align-items: flex-end; gap: 10px; margin: 4px 36px 10px 0; }
+.dname { flex: 1; min-width: 0; }
+.dicons { display: flex; gap: 5px; flex: none; margin-bottom: 1px; }
+.ic {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+}
+.ic:active { transform: translate(1px, 1px); }
+.ic.heart svg path { fill: transparent; transition: fill .15s; }
+.ic.heart.on { background: #f6e3dc; color: var(--mood); border-color: var(--mood); }
+.ic.heart.on svg path { fill: var(--mood); }
 .detail h2 {
-  margin: 7px 34px 10px 0;
+  margin: 5px 0 0;
   font: 400 27px/1.1 'Black Han Sans', sans-serif;
   letter-spacing: -.5px;
 }
@@ -649,18 +666,6 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
 .admin button.on { background: var(--ink); color: var(--paper); }
 .admin .hide { margin-left: auto; border-style: dashed; color: var(--mood); border-color: var(--mood); }
 
-
-/* 담기·공유 */
-.acts { display: flex; gap: 7px; margin-top: 9px; }
-.acts button {
-  flex: 1;
-  padding: 9px 0 10px;
-  border: 2px solid var(--ink);
-  background: var(--paper);
-  font-weight: 700;
-  font-size: 14px;
-}
-.acts button:first-child { background: var(--paper-2); }
 
 /* 그룹 칩 */
 .chip-new { border-style: dashed; color: var(--ink-soft); }

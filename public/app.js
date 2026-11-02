@@ -34,6 +34,24 @@ function setSheet(s) {
 const remember = list => { list.forEach(c => state.cache.set(c.id, c)); return list; };
 const stationById = id => state.stations.find(s => s.id === id);
 const matchesType = c => state.type === 'all' || (c.types || []).includes(state.type);
+const ICON = {
+  heart: '<svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><path d="M12 20s-7-4.4-9.2-8.6C1.2 8.2 3 4.8 6.4 4.8c2.2 0 3.6 1.4 4.6 2.8 1-1.4 2.4-2.8 4.6-2.8 3.4 0 5.2 3.4 3.6 6.6C19 15.6 12 20 12 20z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+  share: '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7h14v-7"/></svg>'
+};
+// 내 그룹 어딘가에 담긴 카페면 하트를 채움
+const isSaved = id => state.myLists.some(l => l.items.includes(id));
+async function refreshMyLists() {
+  if (!Reviews.me().profile) { state.myLists = []; return; }
+  try { state.myLists = await Lists.mine(); } catch (e) { console.error(e); }
+}
+function paintHeart() {
+  const b = document.querySelector('#detail .heart');
+  if (!b || !state.open) return;
+  const on = isSaved(state.open);
+  b.classList.toggle('on', on);
+  b.setAttribute('aria-pressed', on);
+  b.setAttribute('aria-label', on ? '내 그룹에 담김' : '내 그룹에 담기');
+}
 const currentList = () => state.myLists.find(l => l.id === state.list);
 
 // 그룹을 보고 있을 때(내 그룹이거나 링크로 받은 그룹)는 그 카페들만 지도와 목록에
@@ -454,7 +472,9 @@ async function onGroupAction(act) {
 function saveCafe(id) {
   const c = state.cache.get(id);
   if (!c) return;
-  Reviews.member({ save: id }, () => Lists.openPicker(c, () => {
+  Reviews.member({ save: id }, () => Lists.openPicker(c, async () => {
+    await refreshMyLists();
+    paintHeart();
     if (state.mode === 'group') loadLists();
   }));
 }
@@ -564,11 +584,13 @@ async function openCafe(id) {
 
   const s = stationById(c.station_id);
   const q = encodeURIComponent(`${c.name} ${s ? s.name + '역' : ''}`.trim());
+  const kakao = `https://map.kakao.com/link/search/${q}`;
   const naver = `https://map.naver.com/p/search/${q}`;
-  // 영업시간은 데이터에 없으면 네이버 지도로 넘김 (네이버는 운영시간을 API로 안 줌)
+  // 영업시간은 데이터에 없으면 카카오맵으로 넘김
   const hours = c.hours
     ? esc(c.hours)
-    : `<a class="ext" href="${naver}" target="_blank" rel="noopener">네이버 지도에서 보기</a>`;
+    : `<a class="ext" href="${kakao}" target="_blank" rel="noopener">카카오맵에서 보기</a>`;
+  const saved = isSaved(c.id);
   const rows = [
     s && ['역', esc(`${s.name}역${c.walk ? ` 도보 ${c.walk}분` : ''}`)],
     c.address && ['주소', esc(c.address)],
@@ -579,8 +601,16 @@ async function openCafe(id) {
   const d = $('#detail');
   d.innerHTML = `
     <button type="button" class="x" aria-label="닫기">×</button>
-    ${(c.types || []).map(t => `<i class="tag tag-${TYPES[t]?.key}">${esc(t)}</i>`).join('')}
-    <h2>${esc(c.name)}</h2>
+    <div class="dhead">
+      <div class="dname">
+        ${(c.types || []).map(t => `<i class="tag tag-${TYPES[t]?.key}">${esc(t)}</i>`).join('')}
+        <h2>${esc(c.name)}</h2>
+      </div>
+      <div class="dicons">
+        <button type="button" class="ic heart${saved ? ' on' : ''}" data-cafe-act="save" aria-pressed="${saved}" aria-label="${saved ? '내 그룹에 담김' : '내 그룹에 담기'}">${ICON.heart}</button>
+        <button type="button" class="ic" data-cafe-act="share" aria-label="링크 공유">${ICON.share}</button>
+      </div>
+    </div>
     <dl>${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>
     ${c.note ? `<p class="note">${esc(c.note)}</p>` : ''}
     ${c.sample ? '<p class="sample">예시 데이터예요. 실제 카페로 바꿔 주세요.</p>' : ''}
@@ -588,13 +618,9 @@ async function openCafe(id) {
     ${isAdmin() ? adminHTML(c) : ''}
     <section class="rv" id="rv"><p class="rv-none">후기 불러오는 중</p></section>
     <button type="button" class="write-btn" id="write-btn">이 카페 후기 남기기</button>
-    <div class="acts">
-      <button type="button" data-cafe-act="save">담기</button>
-      <button type="button" data-cafe-act="share">공유</button>
-    </div>
     <div class="go">
+      <a href="${kakao}" target="_blank" rel="noopener">카카오맵</a>
       <a href="${naver}" target="_blank" rel="noopener">네이버 지도</a>
-      <a href="https://map.kakao.com/link/search/${q}" target="_blank" rel="noopener">카카오맵</a>
     </div>`;
   Reviews.fillSummary(c.id, $('#rv'), $('#write-btn'));
   d.hidden = false;
@@ -612,6 +638,7 @@ function closeCafe(redraw = true) {
 
 // 후기를 쓰거나 운영자가 표시를 바꾸면 그 카페 정보와 분류 핀을 다시 받음
 async function refreshCafe(id) {
+  refreshMyLists().then(paintHeart);
   if (state.mode === 'group') loadLists();
   try {
     await reloadClassified();
@@ -669,8 +696,9 @@ function paintMe({ user, profile }) {
   b.innerHTML = profile ? Reviews.markHTML(profile.mark) : user ? '이름?' : '로그인';
   b.setAttribute('aria-label', profile ? `내 프로필: ${profile.nickname}` : '로그인');
 }
-Reviews.onChange(s => {
+Reviews.onChange(async s => {
   paintMe(s);
+  await refreshMyLists();
   if (state.mode === 'group') loadLists();
   if (state.open) openCafe(state.open);
 });
