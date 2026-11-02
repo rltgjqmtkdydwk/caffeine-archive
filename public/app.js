@@ -108,7 +108,7 @@ let me = null;
     state.stations = stations;
     state.classified = remember(classified);
     drawStations();
-    if (classified.length) fitTo(classified, 15);
+    startView();
     await refreshView();
     resumeWrite();
   } catch (err) {
@@ -117,6 +117,16 @@ let me = null;
     $('#list').innerHTML = '<li class="empty">카페 정보를 못 불러왔어요. 잠시 뒤에 다시 열어 주세요.</li>';
   }
 })();
+
+// ---------- 처음 화면 ----------
+// 카공·느좋 표시가 붙은 카페가 넉넉하면 그걸 다 보이게, 아직 적으면 카페가 몰린 동네를
+// 점이 다 보이는 크기로 열어서 빈 지도처럼 안 보이게
+const START_SPOT = [37.5572, 126.9245];   // 홍대입구역
+const ENOUGH_PINS = 8;
+function startView() {
+  if (state.classified.length >= ENOUGH_PINS) return fitTo(state.classified, 15);
+  map.setView(START_SPOT, DOT_ZOOM);
+}
 
 // ---------- 불러오기 ----------
 
@@ -695,7 +705,7 @@ $('#me').addEventListener('click', () => Reviews.me().profile ? Me.open() : Revi
 window.App = { openGroup, refreshMyLists, myLists: () => state.myLists };
 
 // 로고: 검색·필터·역·그룹·열린 카페를 다 풀고 처음 지도로
-const HOME_VIEW = [[37.556, 126.99], 13];
+
 function goHome() {
   if (Reviews.isOpen()) Reviews.close();
   closeCafe(false);
@@ -713,8 +723,7 @@ function goHome() {
   $('#q').blur();
   setSheet('peek');
   if (location.search) history.replaceState(null, '', location.pathname);
-  if (state.classified.length) fitTo(state.classified, 15);
-  else map.setView(...HOME_VIEW);
+  startView();
   refreshView();
 }
 
