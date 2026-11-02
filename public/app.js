@@ -169,11 +169,12 @@ function toggleLabels() {
   $('#hint').hidden = !(!groupView() && state.type === 'all' && map.getZoom() < DOT_ZOOM && state.station === 'all' && !state.results);
 }
 
-function pinIcon(c, on) {
+function pinIcon(c, on, color) {
   const t = c.types || [];
-  const k = t.length > 1 ? 'both' : t.length ? (TYPES[t[0]]?.key || 'study') : 'none';
+  const k = color ? 'g' : t.length > 1 ? 'both' : t.length ? (TYPES[t[0]]?.key || 'study') : 'none';
   const label = t.length ? t.map(x => TYPES[x]?.short || '').join('') : '카페';
-  return L.divIcon({ className: `pin pin-${k}${on ? ' is-on' : ''}`, iconSize: null, html: `<b>${esc(label)}</b>` });
+  const style = color ? ` style="--g:${esc(color)}"` : '';
+  return L.divIcon({ className: `pin pin-${k}${on ? ' is-on' : ''}`, iconSize: null, html: `<b${style}>${esc(label)}</b>` });
 }
 
 function drawMap() {
@@ -186,9 +187,10 @@ function drawMap() {
     g.cafes.forEach(c => pins.set(c.id, c));
     const open = state.open && state.cache.get(state.open);
     if (open) pins.set(open.id, open);
+    const gc = g.kind === 'shared' ? state.shared.color : g.list?.color;
     pins.forEach(c => {
       const on = state.open === c.id;
-      L.marker([c.lat, c.lng], { icon: pinIcon(c, on), zIndexOffset: on ? 1000 : 0 })
+      L.marker([c.lat, c.lng], { icon: pinIcon(c, on, gc), zIndexOffset: on ? 1000 : 0 })
         .on('click', () => openCafe(c.id))
         .addTo(pinLayer);
     });
@@ -314,7 +316,7 @@ function renderChips() {
   if (g) {
     if (g.kind === 'shared') {
       const sh = state.shared;
-      box.innerHTML = `<button type="button" class="chip chip-back" data-g="close-shared">‹ ${Reviews.markHTML(sh.mark)}${esc(sh.nickname || '누군가')}의 ${esc(sh.name)}</button>
+      box.innerHTML = `<button type="button" class="chip chip-back" data-g="close-shared"${sh.color ? ` style="--g:${esc(sh.color)}"` : ''}>‹ ${Reviews.markHTML(sh.mark)}${esc(sh.nickname || '누군가')}의 ${esc(sh.name)}</button>
         <button type="button" class="chip chip-act" data-g="copy">내 그룹으로 담기</button>`;
       return;
     }
@@ -363,9 +365,10 @@ async function openGroup(id, { fit = true, sheet = true } = {}) {
   if (fit) closeCafe(false);
   const l = currentList();
   try { state.groupCafes = l ? remember(await Cafes.byIds(l.items)) : []; } catch (e) { console.error(e); state.groupCafes = []; }
-  render();
-  if (fit && state.groupCafes.length) fitTo(state.groupCafes, 16);
   if (sheet) setSheet('half');
+  render();
+  // 목록이 절반 올라온 뒤에 맞춰야 핀이 목록 뒤에 안 숨음
+  if (fit && state.groupCafes.length) setTimeout(() => fitTo(state.groupCafes, 16), 300);
 }
 
 function closeGroup() {

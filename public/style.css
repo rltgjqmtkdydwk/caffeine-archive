@@ -730,7 +730,8 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
 .who-edit { margin-left: 3px; font-size: 12.5px; color: var(--ink-soft); text-decoration: underline; }
 .groups, .menu { list-style: none; padding: 0; margin: 0; }
 .groups li, .menu li { border-bottom: 1px dashed #b3a690; }
-.grow, .menu button {
+.grow { display: flex; align-items: center; gap: 4px; }
+.gopen, .menu button, .grow-new {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -739,12 +740,39 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
   text-align: left;
   font-size: 15.5px;
 }
-.gname { font-weight: 700; border-left: 6px solid var(--g, transparent); padding-left: 8px; }
-.gname.g-study { --g: var(--study); }
-.gname.g-mood { --g: var(--mood); }
-.grow span { margin-left: auto; font-size: 12.5px; color: var(--ink-soft); }
-.grow i { font-style: normal; font-size: 20px; color: var(--ink-soft); }
-.grow.new { color: var(--ink-soft); font-size: 14px; }
+.gopen { flex: 1; min-width: 0; }
+.gdot {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin: 0 5px 0 1px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--g);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.painting .gdot { transform: translate(1px, 1px); box-shadow: none; outline: 2px solid var(--hi); outline-offset: 2px; }
+.gname { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gopen span { margin-left: auto; font-size: 12.5px; color: var(--ink-soft); }
+.gopen i { font-style: normal; font-size: 20px; color: var(--ink-soft); }
+.grow-new { color: var(--ink-soft); font-size: 14px; }
+
+/* 그룹 색 팔레트 */
+.pal { display: flex; flex-wrap: wrap; gap: 9px 8px; padding: 2px 0 15px 38px; }
+.sw {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--c);
+  cursor: pointer;
+}
+.sw.on { box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--ink); }
+.sw.add { background: var(--paper); border-style: dashed; font-size: 19px; font-weight: 700; line-height: 1; color: var(--ink); }
+.sw.add input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .groups li:last-child { border-bottom: 0; }
 .menu { border-top: 2px solid var(--ink); }
 .menu button { font-weight: 700; }
@@ -752,6 +780,11 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
 .menu i { margin-left: auto; font-style: normal; font-size: 20px; color: var(--ink-soft); }
 .live { padding: 1px 6px 2px; background: var(--mood); color: var(--paper); font-size: 10.5px; font-weight: 700; font-style: normal; }
 
+
+/* 그룹을 보고 있을 땐 핀도 그룹 색 */
+.pin-g b { background: var(--g); }
+.pick b { border-left: 5px solid var(--g, transparent); padding-left: 7px; }
+.pick.on .box { background: var(--g, var(--ink)); box-shadow: inset 0 0 0 3px var(--paper); }
 /* 넓은 화면 */
 @media (min-width: 860px) {
   .sheet, body[data-sheet] .sheet {

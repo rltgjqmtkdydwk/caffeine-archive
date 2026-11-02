@@ -24,6 +24,11 @@ create table if not exists public.lists (
 create unique index if not exists lists_default_idx on public.lists (user_id, kind) where kind is not null;
 create index if not exists lists_user_idx on public.lists (user_id, created_at);
 
+-- 그룹 색 (#rrggbb). 비어 있으면 화면에서 기본색
+alter table public.lists add column if not exists color text;
+alter table public.lists drop constraint if exists lists_color_hex;
+alter table public.lists add constraint lists_color_hex check (color is null or color ~ '^#[0-9a-f]{6}$');
+
 create table if not exists public.list_items (
   list_id   uuid not null references public.lists (id) on delete cascade,
   cafe_id   text not null check (char_length(cafe_id) between 1 and 40),
@@ -49,7 +54,7 @@ drop policy if exists "own items delete" on public.list_items;
 
 create policy "own lists read"   on public.lists for select to authenticated using (user_id = auth.uid());
 create policy "own lists write"  on public.lists for insert to authenticated with check (user_id = auth.uid() and kind is null);
-create policy "own lists edit"   on public.lists for update to authenticated using (user_id = auth.uid() and kind is null) with check (user_id = auth.uid());
+create policy "own lists edit"   on public.lists for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own lists delete" on public.lists for delete to authenticated using (user_id = auth.uid() and kind is null);
 
 create policy "own items read"   on public.list_items for select to authenticated
@@ -61,7 +66,25 @@ create policy "own items delete" on public.list_items for delete to authenticate
 
 revoke all on public.lists, public.list_items from anon, authenticated;
 grant select, delete on public.lists to authenticated;
-grant insert (name), update (name) on public.lists to authenticated;   -- share_id, kind는 아래 함수로만
+grant insert (name, color), update (name, color) on public.lists to authenticated;   -- share_id, kind는 아래 함수로만
+
+-- 기본 그룹(카공·느좋)은 색은 바꿔도 되지만 이름은 그대로
+create or replace function public.lists_guard()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if old.kind is not null and new.name is distinct from old.name then
+    raise exception 'default list name is fixed';
+  end if;
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists lists_guard on public.lists;
+create trigger lists_guard before update on public.lists for each row execute function public.lists_guard();
 grant select, insert (list_id, cafe_id), delete on public.list_items to authenticated;
 
 -- 그룹은 한 사람당 30개, 그룹 하나에 카페 500곳까지
@@ -152,6 +175,7 @@ set search_path = ''
 as $$
   select json_build_object(
     'name', l.name,
+    'color', l.color,
     'nickname', p.nickname,
     'mark', p.mark,
     'cafes', coalesce((

@@ -3,6 +3,29 @@ window.Lists = (() => {
   const LIVE = Reviews.live;
   const LS = 'caffeine-demo-lists';
   const MAX_NAME = 20;
+
+  // 그룹 색: 기본 4색 + 사용자가 직접 추가한 색(이 기기에 저장) + 이미 그룹에 쓰고 있는 색
+  const BASE_COLORS = ['#56622b', '#c2452d', '#d9a21b', '#2e6f66'];
+  const COLOR_KEY = 'caffeine-colors';
+  const HEX = /^#[0-9a-f]{6}$/;
+  const customColors = () => { try { return (JSON.parse(localStorage.getItem(COLOR_KEY)) || []).filter(c => HEX.test(c)); } catch { return []; } };
+  function addColor(c) {
+    c = String(c).toLowerCase();
+    if (!HEX.test(c)) return;
+    const a = customColors().filter(x => x !== c);
+    a.push(c);
+    try { localStorage.setItem(COLOR_KEY, JSON.stringify(a.slice(-12))); } catch {}
+  }
+  function palette(lists = []) {
+    return [...new Set([...BASE_COLORS, ...customColors(), ...lists.map(l => l.color).filter(Boolean)])];
+  }
+  // 색을 안 고른 그룹: 카공은 올리브, 느좋은 다홍, 나머지는 만든 순서대로 기본색 돌려 쓰기
+  function colorOf(l, i = 0) {
+    if (l?.color) return l.color;
+    if (l?.kind === 'study') return BASE_COLORS[0];
+    if (l?.kind === 'mood') return BASE_COLORS[1];
+    return BASE_COLORS[(i + 2) % BASE_COLORS.length];
+  }
   const $ = s => document.querySelector(s);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, ch =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -29,14 +52,14 @@ window.Lists = (() => {
   let ensured = false;
 
   async function mine() {
-    if (!LIVE) return demo.all();
+    if (!LIVE) return demo.all().map((l, i) => ({ ...l, color: colorOf(l, i) }));
     const db = await Reviews.db();
     if (!ensured) {
       const { error } = await db.rpc('ensure_default_lists');
       if (!error) ensured = true;
     }
     const { data, error } = await db.from('lists')
-      .select('id,name,kind,share_id,created_at,list_items(cafe_id,added_at)')
+      .select('id,name,kind,color,share_id,created_at,list_items(cafe_id,added_at)')
       .order('created_at', { ascending: true });
     if (error) throw error;
     // 기본 그룹(카공·느좋)이 맨 앞
@@ -46,19 +69,21 @@ window.Lists = (() => {
         ...l,
         items: (l.list_items || []).sort((a, b) => b.added_at.localeCompare(a.added_at)).map(i => i.cafe_id)
       }))
-      .sort((a, b) => rank(a) - rank(b));
+      .sort((a, b) => rank(a) - rank(b))
+      .map((l, i) => ({ ...l, color: colorOf(l, i) }));
   }
 
-  async function create(name) {
+  async function create(name, color) {
     name = name.trim().slice(0, MAX_NAME);
+    if (!color || !HEX.test(color)) color = BASE_COLORS[2 + Math.floor(Math.random() * 2)];
     if (!LIVE) {
       const a = demo.all();
-      const l = { id: 'd-' + Date.now(), name, kind: null, share_id: null, items: [] };
+      const l = { id: 'd-' + Date.now(), name, kind: null, color, share_id: null, items: [] };
       a.push(l); demo.save(a);
       return l;
     }
     const db = await Reviews.db();
-    const { data, error } = await db.from('lists').insert({ name }).select('id,name,kind,share_id').single();
+    const { data, error } = await db.from('lists').insert({ name, color }).select('id,name,kind,color,share_id').single();
     if (error) throw error;
     return { ...data, items: [] };
   }
@@ -68,6 +93,15 @@ window.Lists = (() => {
     if (!LIVE) return demo.edit(id, l => { l.name = name; });
     const db = await Reviews.db();
     const { error } = await db.from('lists').update({ name }).eq('id', id);
+    if (error) throw error;
+  }
+
+  async function setColor(id, color) {
+    color = String(color).toLowerCase();
+    if (!HEX.test(color)) return;
+    if (!LIVE) return demo.edit(id, l => { l.color = color; });
+    const db = await Reviews.db();
+    const { error } = await db.from('lists').update({ color }).eq('id', id);
     if (error) throw error;
   }
 
@@ -117,7 +151,7 @@ window.Lists = (() => {
       const l = demo.all().find(x => x.share_id === sid);
       if (!l) return null;
       const p = Reviews.me().profile;
-      return { name: l.name, nickname: p?.nickname || '누군가', mark: p?.mark || 1, cafes: await Cafes.byIds(l.items) };
+      return { name: l.name, color: l.color, nickname: p?.nickname || '누군가', mark: p?.mark || 1, cafes: await Cafes.byIds(l.items) };
     }
     const db = await Reviews.db();
     const { data, error } = await db.rpc('get_shared_list', { p_share: sid });
@@ -167,7 +201,7 @@ window.Lists = (() => {
     const { cafe, lists } = picking;
     const rows = lists.map(l => {
       const on = l.items.includes(cafe.id);
-      return `<li><button type="button" class="pick${on ? ' on' : ''}" data-list-act="toggle" data-id="${esc(l.id)}" aria-pressed="${on}">
+      return `<li><button type="button" class="pick${on ? ' on' : ''}" data-list-act="toggle" data-id="${esc(l.id)}" aria-pressed="${on}" style="--g:${esc(l.color || '#211a15')}">
         <i class="box"></i><b>${esc(l.name)}</b><small>${l.items.length}곳</small>
       </button></li>`;
     }).join('');
@@ -241,7 +275,7 @@ window.Lists = (() => {
         const l = await create(name);
         await add(l.id, cafe.id);
         l.items = [cafe.id];
-        lists.push(l);
+        lists.push({ ...l, color: colorOf(l, lists.length) });
         repaint();
         picking.onChange?.();
       } catch (err) { console.error(err); fail(explain(err)); b.disabled = false; }
@@ -255,5 +289,5 @@ window.Lists = (() => {
     }
   });
 
-  return { live: LIVE, syncFromReview, mine, create, rename, remove, add, drop, share, unshare, shared, linkTo, sendLink, openPicker };
+  return { live: LIVE, BASE_COLORS, palette, addColor, colorOf, setColor, syncFromReview, mine, create, rename, remove, add, drop, share, unshare, shared, linkTo, sendLink, openPicker };
 })();

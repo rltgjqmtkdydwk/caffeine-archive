@@ -5,13 +5,51 @@ window.Me = (() => {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
   let lists = [];
+  let painting = null;   // 색 고르는 중인 그룹 id
+
+  // 색 점을 누르면 그 줄 아래에 팔레트. 맨 끝 +는 직접 색 고르기
+  function paletteHTML(l) {
+    const swatches = Lists.palette(lists).map(c =>
+      `<button type="button" class="sw${c === l.color ? ' on' : ''}" style="--c:${esc(c)}" data-me="pick" data-id="${esc(l.id)}" data-color="${esc(c)}" aria-label="색 ${esc(c)}"></button>`).join('');
+    return `<div class="pal">${swatches}
+      <label class="sw add" aria-label="색 추가">+<input type="color" data-me-input="add" data-id="${esc(l.id)}" value="${esc(l.color)}"></label>
+    </div>`;
+  }
 
   function groupRow(l) {
-    return `<li><button type="button" class="grow" data-me="group" data-id="${esc(l.id)}">
-      <b class="gname${l.kind ? ' g-' + l.kind : ''}">${esc(l.name)}</b>
-      ${l.share_id ? '<em class="live">공유 중</em>' : ''}
-      <span>${l.items.length}곳</span><i aria-hidden="true">›</i>
-    </button></li>`;
+    const open = painting === l.id;
+    return `<li${open ? ' class="painting"' : ''}><div class="grow" style="--g:${esc(l.color)}">
+      <button type="button" class="gdot" data-me="color" data-id="${esc(l.id)}" aria-label="${esc(l.name)} 색 바꾸기" aria-expanded="${open}"></button>
+      <button type="button" class="gopen" data-me="group" data-id="${esc(l.id)}">
+        <b class="gname">${esc(l.name)}</b>
+        ${l.share_id ? '<em class="live">공유 중</em>' : ''}
+        <span>${l.items.length}곳</span><i aria-hidden="true">›</i>
+      </button>
+    </div>${open ? paletteHTML(l) : ''}</li>`;
+  }
+
+  function repaint() {
+    const body = $('#panel .w-body');
+    const y = body?.scrollTop || 0;
+    $('#panel').innerHTML = homeHTML();
+    $('#panel .w-body').scrollTop = y;
+  }
+
+  async function paint(id, color) {
+    const l = lists.find(x => x.id === id);
+    if (!l) return;
+    const before = l.color;
+    l.color = color;
+    repaint();
+    try {
+      await Lists.setColor(id, color);
+      App.refreshMyLists();
+    } catch (err) {
+      console.error(err);
+      l.color = before;
+      repaint();
+      Reviews.toast('색을 못 바꿨어요');
+    }
   }
 
   function homeHTML() {
@@ -26,7 +64,7 @@ window.Me = (() => {
       <div class="w-body">
         <p class="w-group">내 그룹</p>
         <ul class="groups">${lists.map(groupRow).join('')}
-          <li><button type="button" class="grow new" data-me="new">+ 새 그룹</button></li>
+          <li><button type="button" class="grow-new" data-me="new">+ 새 그룹</button></li>
         </ul>
         <p class="w-group">계정</p>
         <ul class="menu">
@@ -38,6 +76,7 @@ window.Me = (() => {
 
   async function open() {
     if (!Reviews.me().profile) return Reviews.openAccount();
+    painting = null;
     try { lists = await Lists.mine(); } catch (e) { console.error(e); lists = []; }
     Reviews.show(homeHTML(), 'me');
   }
@@ -52,6 +91,11 @@ window.Me = (() => {
       return App.openGroup(b.dataset.id);
     }
     if (act === 'edit') return Reviews.editProfile(open);
+    if (act === 'color') {
+      painting = painting === b.dataset.id ? null : b.dataset.id;
+      return repaint();
+    }
+    if (act === 'pick') return paint(b.dataset.id, b.dataset.color);
     if (act === 'new') {
       const name = prompt('새 그룹 이름 (20자까지)');
       if (!name?.trim()) return;
@@ -80,6 +124,13 @@ window.Me = (() => {
         alert('탈퇴하지 못했어요. 잠시 뒤 다시 시도해 주세요.');
       }
     }
+  });
+
+  document.addEventListener('change', e => {
+    const inp = e.target.closest('[data-me-input="add"]');
+    if (!inp || !$('#panel').contains(inp)) return;
+    Lists.addColor(inp.value);
+    paint(inp.dataset.id, inp.value.toLowerCase());
   });
 
   return { open };
