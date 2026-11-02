@@ -408,7 +408,8 @@ async function onGroupAction(act) {
       const sid = await Lists.share(l.id);
       l.share_id = sid;
       render();
-      return Lists.sendLink(Lists.linkTo({ list: sid }), `카페인 아카이브 · ${Lists.label(l)}`);
+      return Lists.sendLink(Lists.linkTo({ list: sid }), `카페인 아카이브 · ${Lists.label(l)}`,
+        `제가 모은 카페 그룹 "${Lists.label(l)}"이에요. ${l.items.length}곳 담겨 있어요.`);
     }
     if (act === 'unshare' && l) {
       if (!confirm('공유를 끌까요? 보냈던 링크는 더 이상 안 열려요.')) return;
@@ -461,7 +462,10 @@ function saveCafe(id) {
 function shareCafe(id) {
   const c = state.cache.get(id);
   if (!c) return;
-  Lists.sendLink(Lists.linkTo({ cafe: id }), `${c.name} · 카페인 아카이브`);
+  const s = stationById(c.station_id);
+  const where = s ? ` (${s.name}역${c.walk ? ` 도보 ${c.walk}분` : ''})` : '';
+  const kind = c.types?.length ? ` ${c.types.join('·')} 카페예요.` : '';
+  Lists.sendLink(Lists.linkTo({ cafe: id }), `${c.name} · 카페인 아카이브`, `${c.name}${where}.${kind} 카페인 아카이브에서 봐요.`);
 }
 
 // ---------- 검색 ----------

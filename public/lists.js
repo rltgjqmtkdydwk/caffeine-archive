@@ -198,9 +198,10 @@ window.Lists = (() => {
   };
 
   // 휴대폰이면 공유 창, 아니면 링크 복사
-  async function sendLink(url, title) {
+  // 링크 미리보기는 사이트 공통 카드라서, 무슨 카페·그룹인지는 같이 보내는 글로 알려 줌
+  async function sendLink(url, title, text) {
     if (navigator.share) {
-      try { await navigator.share({ title, url }); return; }
+      try { await navigator.share({ title, text: text || title, url }); return; }
       catch (e) { if (e.name === 'AbortError') return; }
     }
     try {
