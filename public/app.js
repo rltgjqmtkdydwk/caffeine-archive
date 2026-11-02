@@ -19,7 +19,7 @@ const state = {
   mode: 'type', type: 'all', station: 'all',
   stations: [], classified: [], nearby: [], stationCafes: [], results: null,
   cache: new Map(), open: null, query: { type: '', station: '' },
-  myLists: [], list: null, groupCafes: [], shared: null
+  myLists: [], group: null, groupCafes: [], shared: null
 };
 
 const $ = s => document.querySelector(s);
@@ -52,12 +52,12 @@ function paintHeart() {
   b.setAttribute('aria-pressed', on);
   b.setAttribute('aria-label', on ? '내 그룹에 담김' : '내 그룹에 담기');
 }
-const currentList = () => state.myLists.find(l => l.id === state.list);
+const currentList = () => state.myLists.find(l => l.id === state.group);
 
 // 그룹을 보고 있을 때(내 그룹이거나 링크로 받은 그룹)는 그 카페들만 지도와 목록에
 function groupView() {
   if (state.shared) return { kind: 'shared', title: state.shared.name, cafes: state.shared.cafes };
-  if (state.mode === 'group') {
+  if (state.group) {
     const l = currentList();
     return { kind: 'mine', title: l ? l.name : '그룹', cafes: l ? state.groupCafes : [], list: l };
   }
@@ -267,44 +267,15 @@ function itemHTML(c) {
   </button></li>`;
 }
 
-function groupBarHTML() {
-  const g = groupView();
-  if (!g) return '';
-  if (g.kind === 'shared') {
-    const sh = state.shared;
-    return `<li class="gbar shared">
-      <p>${Reviews.markHTML(sh.mark)}<b>${esc(sh.nickname || '누군가')}</b> 님이 모은 그룹</p>
-      <div>
-        <button type="button" data-g="copy">내 그룹으로 담기</button>
-        <button type="button" data-g="close-shared" class="ghost">닫기</button>
-      </div>
-    </li>`;
-  }
-  if (!Reviews.me().profile) {
-    return '<li class="gbar"><p>로그인하면 카페를 그룹에 모아 두고 친구한테 링크로 보낼 수 있어.</p><div><button type="button" data-g="login">카카오로 시작</button></div></li>';
-  }
-  const l = g.list;
-  if (!l) return '';
-  return `<li class="gbar">
-    <p>${l.share_id ? '<span class="live">공유 중</span> 링크 있는 사람은 다 볼 수 있어' : '나만 보는 그룹'}</p>
-    <div>
-      <button type="button" data-g="share">${l.share_id ? '링크 다시 보내기' : '링크로 공유'}</button>
-      ${l.share_id ? '<button type="button" data-g="unshare" class="ghost">공유 끄기</button>' : ''}
-      ${l.kind ? '' : '<button type="button" data-g="rename" class="ghost">이름 바꾸기</button><button type="button" data-g="delete" class="ghost danger">지우기</button>'}
-    </div>
-  </li>`;
-}
-
 function renderList() {
   const { title, rows, keepOrder } = listCafes();
   const sorted = keepOrder ? rows : sortRows(rows);
   $('#count').textContent = `${title} ${rows.length}${rows.length >= 500 ? '+' : ''}곳`;
 
-  const bar = groupBarHTML();
-  let html = bar + sorted.slice(0, LIST_MAX).map(itemHTML).join('');
+  let html = sorted.slice(0, LIST_MAX).map(itemHTML).join('');
   if (rows.length > LIST_MAX) html += `<li class="more">나머지 ${rows.length - LIST_MAX}곳은 지도에서 콕 눌러 봐</li>`;
   if (!rows.length && groupView()) {
-    html = bar + (Reviews.me().profile || state.shared ? '<li class="empty">아직 비어 있어. 카페를 열고 "담기"를 눌러 봐.</li>' : '');
+    html = '<li class="empty">아직 비어 있어. 카페를 열고 하트를 눌러 담아 봐.</li>';
   } else if (!rows.length) {
     html = state.results
       ? '<li class="empty">그런 이름의 카페는 못 찾았어요.</li>'
@@ -338,15 +309,20 @@ function stationOptions() {
 function renderChips() {
   const box = $('#chip-list');
   const input = $('#q');
-  input.hidden = state.mode === 'group';
-  if (state.mode === 'group') {
-    if (!Reviews.me().profile) {
-      box.innerHTML = '<button type="button" class="chip" data-g="login">로그인하고 그룹 만들기</button>';
+  const g = groupView();
+  input.hidden = !!g;
+  if (g) {
+    if (g.kind === 'shared') {
+      const sh = state.shared;
+      box.innerHTML = `<button type="button" class="chip chip-back" data-g="close-shared">‹ ${Reviews.markHTML(sh.mark)}${esc(sh.nickname || '누군가')}의 ${esc(sh.name)}</button>
+        <button type="button" class="chip chip-act" data-g="copy">내 그룹으로 담기</button>`;
       return;
     }
-    box.innerHTML = state.myLists.map(l => `<button type="button" class="chip chip-${l.kind || 'mine'}${state.list === l.id ? ' on' : ''}" data-list="${esc(l.id)}">
-      ${esc(l.name)}<em>${l.items.length}</em>${l.share_id ? '<small>공유</small>' : ''}</button>`).join('') +
-      '<button type="button" class="chip chip-new" data-g="new">+ 새 그룹</button>';
+    const l = g.list;
+    box.innerHTML = `<button type="button" class="chip chip-back" data-g="close-group"${l?.color ? ` style="--g:${esc(l.color)}"` : ''}>‹ ${esc(g.title)}</button>` + (l ? `
+      <button type="button" class="chip chip-act" data-g="share">${l.share_id ? '링크 다시 보내기' : '링크 공유'}</button>
+      ${l.share_id ? '<button type="button" class="chip chip-ghost" data-g="unshare">공유 끄기</button>' : ''}
+      ${l.kind ? '' : '<button type="button" class="chip chip-ghost" data-g="rename">이름 바꾸기</button><button type="button" class="chip chip-ghost danger" data-g="delete">지우기</button>'}` : '');
     return;
   }
   input.placeholder = state.mode === 'type' ? '카페 이름' : '역 이름';
@@ -370,32 +346,32 @@ function renderChips() {
 function setMode(m) {
   state.mode = m;
   state.shared = null;
+  state.group = null;
   document.querySelectorAll('.mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
-  if (m === 'group') {
-    closeCafe(false);
-    loadLists();
-  }
   render();
 }
 
 // ---------- 그룹 ----------
 
-async function loadLists(selectId) {
-  if (!Reviews.me().profile) { state.myLists = []; state.list = null; state.groupCafes = []; render(); return; }
-  try {
-    state.myLists = await Lists.mine();
-  } catch (e) { console.error(e); state.myLists = []; }
-  const keep = selectId || state.list;
-  state.list = state.myLists.some(l => l.id === keep) ? keep : state.myLists[0]?.id || null;
-  await showList(state.list, !!selectId);
-}
-
-async function showList(id, fit = true) {
-  state.list = id;
+// 내 프로필에서 그룹을 고르면 지도에 그 그룹 카페만
+async function openGroup(id, { fit = true, sheet = true } = {}) {
+  await refreshMyLists();
+  state.group = id;
+  state.shared = null;
+  state.results = null;
+  state.station = 'all';
+  if (fit) closeCafe(false);
   const l = currentList();
   try { state.groupCafes = l ? remember(await Cafes.byIds(l.items)) : []; } catch (e) { console.error(e); state.groupCafes = []; }
   render();
   if (fit && state.groupCafes.length) fitTo(state.groupCafes, 16);
+  if (sheet) setSheet('half');
+}
+
+function closeGroup() {
+  state.group = null;
+  state.groupCafes = [];
+  render();
 }
 
 async function openShared(sid) {
@@ -417,14 +393,6 @@ function closeShared() {
 async function onGroupAction(act) {
   const l = currentList();
   try {
-    if (act === 'login') return Reviews.member({ group: '1' }, () => setMode('group'));
-    if (act === 'new') {
-      const name = prompt('새 그룹 이름 (20자까지)');
-      if (!name?.trim()) return;
-      const made = await Lists.create(name);
-      await loadLists(made.id);
-      return;
-    }
     if (act === 'share' && l) {
       const sid = await Lists.share(l.id);
       l.share_id = sid;
@@ -441,13 +409,13 @@ async function onGroupAction(act) {
       const name = prompt('그룹 이름', l.name);
       if (!name?.trim() || name.trim() === l.name) return;
       await Lists.rename(l.id, name);
-      return loadLists(l.id);
+      return openGroup(l.id, { fit: false, sheet: false });
     }
     if (act === 'delete' && l) {
       if (!confirm(`"${l.name}" 그룹을 지울까요? 담긴 카페 목록도 같이 없어져요.`)) return;
       await Lists.remove(l.id);
-      state.list = null;
-      return loadLists();
+      await refreshMyLists();
+      return closeGroup();
     }
     if (act === 'copy' && state.shared) {
       const sh = state.shared;
@@ -456,12 +424,11 @@ async function onGroupAction(act) {
         for (const c of sh.cafes) await Lists.add(made.id, c.id);
         state.shared = null;
         Reviews.toast('내 그룹에 담았어요');
-        state.mode = 'group';
-        document.querySelectorAll('.mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === 'group'));
-        await loadLists(made.id);
+        await openGroup(made.id);
       });
     }
     if (act === 'close-shared') return closeShared();
+    if (act === 'close-group') return closeGroup();
   } catch (e) {
     console.error(e);
     const m = String(e?.message || e);
@@ -475,7 +442,7 @@ function saveCafe(id) {
   Reviews.member({ save: id }, () => Lists.openPicker(c, async () => {
     await refreshMyLists();
     paintHeart();
-    if (state.mode === 'group') loadLists();
+    if (state.group) openGroup(state.group, { fit: false, sheet: false });
   }));
 }
 
@@ -639,7 +606,7 @@ function closeCafe(redraw = true) {
 // 후기를 쓰거나 운영자가 표시를 바꾸면 그 카페 정보와 분류 핀을 다시 받음
 async function refreshCafe(id) {
   refreshMyLists().then(paintHeart);
-  if (state.mode === 'group') loadLists();
+  if (state.group) openGroup(state.group, { fit: false, sheet: false });
   try {
     await reloadClassified();
     const c = await Cafes.byId(id);
@@ -684,7 +651,7 @@ async function resumeWrite() {
     await openCafe(save);
     return saveCafe(save);
   }
-  if (p.get('group')) return setMode('group');
+  if (p.get('group')) return Me.open();
   if (cafe) return openCafe(cafe);
   if (Reviews.me().user && !Reviews.me().profile) Reviews.openAccount();
 }
@@ -699,10 +666,14 @@ function paintMe({ user, profile }) {
 Reviews.onChange(async s => {
   paintMe(s);
   await refreshMyLists();
-  if (state.mode === 'group') loadLists();
+  if (state.group && !s.profile) closeGroup();
+  else if (state.group) openGroup(state.group, { fit: false, sheet: false });
   if (state.open) openCafe(state.open);
 });
-$('#me').addEventListener('click', () => Reviews.openAccount());
+// 닉네임까지 있으면 내 프로필(그룹·설정), 아니면 로그인이나 닉네임 정하기
+$('#me').addEventListener('click', () => Reviews.me().profile ? Me.open() : Reviews.openAccount());
+
+window.App = { openGroup, refreshMyLists, myLists: () => state.myLists };
 
 // 로고: 검색·필터·역·그룹·열린 카페를 다 풀고 처음 지도로
 const HOME_VIEW = [[37.556, 126.99], 13];
@@ -713,6 +684,8 @@ function goHome() {
   state.station = 'all';
   state.results = null;
   state.shared = null;
+  state.group = null;
+  state.groupCafes = [];
   state.stationCafes = [];
   state.query = { type: '', station: '' };
   state.mode = 'type';
@@ -759,7 +732,6 @@ $('#chip-list').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
   if (b.dataset.g) return onGroupAction(b.dataset.g);
-  if (b.dataset.list) { closeCafe(false); return showList(b.dataset.list); }
   if (b.dataset.type) {
     state.type = b.dataset.type;
     state.shared = null;

@@ -675,23 +675,6 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
 .chip-study.on { background: var(--study); border-color: var(--study); }
 .chip-mood.on { background: var(--mood); border-color: var(--mood); }
 
-/* 그룹 목록 위 막대 */
-.gbar {
-  padding: 12px 17px 13px 19px;
-  border-bottom: 2px solid var(--ink) !important;
-  background: var(--paper-2);
-}
-.gbar p { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); }
-.gbar p b { color: var(--ink); }
-.gbar .live { padding: 1px 6px 2px; background: var(--mood); color: var(--paper); font-size: 11px; font-weight: 700; }
-.gbar div { display: flex; flex-wrap: wrap; gap: 6px 5px; margin-top: 9px; }
-.gbar button { padding: 6px 11px 7px; border: 1.5px solid var(--ink); background: var(--hi); font-size: 13px; font-weight: 700; }
-.gbar button.ghost { background: var(--paper); font-weight: 500; }
-.gbar button.danger { color: var(--mood); border-color: var(--mood); border-style: dashed; }
-.gbar.shared { background: var(--hi); }
-.gbar.shared button { background: var(--ink); color: var(--paper); }
-.gbar.shared button.ghost { background: var(--paper); color: var(--ink); }
-
 /* 담기 창 */
 .picks { list-style: none; padding: 0; margin: 2px 0 0; }
 .picks li { border-bottom: 1px dashed #b3a690; }
@@ -726,6 +709,48 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
   .mode button { padding: 6px 9px 7px; font-size: 13.5px; }
   .me { min-width: 33px; height: 31px; padding: 0 6px; font-size: 12px; }
 }
+
+
+/* 그룹을 보고 있을 때 필터 줄 */
+.chip-back {
+  background: var(--hi);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-weight: 700;
+  border-left: 6px solid var(--g, var(--ink));
+}
+.chip-back .mk { margin-right: 2px; }
+.chip-act { background: var(--ink); color: var(--paper); font-weight: 700; }
+.chip-ghost { border-style: dashed; color: var(--ink-soft); }
+.chip-ghost.danger { color: var(--mood); border-color: var(--mood); }
+
+/* 내 프로필 */
+.who { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.who .mk { width: 26px; height: 26px; }
+.who h2 { margin: 0; }
+.who-edit { margin-left: 3px; font-size: 12.5px; color: var(--ink-soft); text-decoration: underline; }
+.groups, .menu { list-style: none; padding: 0; margin: 0; }
+.groups li, .menu li { border-bottom: 1px dashed #b3a690; }
+.grow, .menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 13px 2px 14px 1px;
+  text-align: left;
+  font-size: 15.5px;
+}
+.gname { font-weight: 700; border-left: 6px solid var(--g, transparent); padding-left: 8px; }
+.gname.g-study { --g: var(--study); }
+.gname.g-mood { --g: var(--mood); }
+.grow span { margin-left: auto; font-size: 12.5px; color: var(--ink-soft); }
+.grow i { font-style: normal; font-size: 20px; color: var(--ink-soft); }
+.grow.new { color: var(--ink-soft); font-size: 14px; }
+.groups li:last-child { border-bottom: 0; }
+.menu { border-top: 2px solid var(--ink); }
+.menu button { font-weight: 700; }
+.menu .danger { color: var(--mood); font-weight: 500; font-size: 13.5px; }
+.menu i { margin-left: auto; font-style: normal; font-size: 20px; color: var(--ink-soft); }
+.live { padding: 1px 6px 2px; background: var(--mood); color: var(--paper); font-size: 10.5px; font-weight: 700; font-style: normal; }
 
 /* 넓은 화면 */
 @media (min-width: 860px) {

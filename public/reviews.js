@@ -362,7 +362,7 @@ window.Reviews = (() => {
     const first = !profile;
     pDraft = { nickname: profile?.nickname || suggestNick(), mark: profile?.mark || Math.ceil(Math.random() * MARKS) };
     show(`
-      ${head(first ? '처음 한 번만' : '내 프로필', first ? '여기서 쓸 이름 정하기' : esc(profile.nickname))}
+      ${head(first ? '처음 한 번만' : '내 프로필', first ? '여기서 쓸 이름 정하기' : '닉네임·표시 바꾸기')}
       <div class="w-body">
         <p class="w-hint">후기 옆에 붙는 건 이 닉네임과 표시뿐이에요. 카카오에서 쓰는 이름과 다르게 지으면 누가 썼는지 아무도 몰라요.</p>
         <label class="w-label" for="nick">닉네임 <small>2–12자, 한글·영문·숫자</small></label>
@@ -373,11 +373,6 @@ window.Reviews = (() => {
         <p class="w-label" style="margin-top:19px">표시</p>
         <div class="marks">${Array.from({ length: MARKS }, (_, i) =>
           `<button type="button" data-act="mark" data-v="${i + 1}" class="${pDraft.mark === i + 1 ? 'on' : ''}" aria-label="표시 ${i + 1}">${mark(i + 1)}</button>`).join('')}</div>
-        ${first ? '' : `
-          <div class="acct">
-            <button type="button" data-act="logout">로그아웃</button>
-            <button type="button" data-act="delete-account" class="danger">탈퇴하기 (내 후기도 전부 삭제)</button>
-          </div>`}
       </div>
       <footer class="w-foot">
         <p class="w-err" hidden></p>
@@ -614,6 +609,9 @@ window.Reviews = (() => {
     member,
     toast,
     show,
+    editProfile: then => showProfile(then),
+    logout,
+    deleteAccount,
     onChange: f => listeners.push(f),
     me: () => ({ user, profile }),
     markHTML: mark,

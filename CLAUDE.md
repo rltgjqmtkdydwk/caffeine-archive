@@ -5,7 +5,7 @@
 ## 구조
 
 - 빌드 도구 없는 정적 사이트. 사이트 파일은 `public/`에 있고 이 폴더가 서빙 루트. Cloudflare Pages가 이 폴더로 배포(main 푸시 시 자동). GitHub Pages는 꺼 둠
-- `public/app.js` 지도·필터·목록·상세 / `cafes.js` 카페·역 데이터 읽기 / `lists.js` 그룹(담기·공유) / `reviews.js` 로그인·프로필·후기 / `style.css` 전부
+- `public/app.js` 지도·필터·목록·상세 / `cafes.js` 카페·역 데이터 읽기 / `lists.js` 그룹(담기·공유) / `me.js` 내 프로필(그룹 목록·설정) / `reviews.js` 로그인·프로필·후기 / `style.css` 전부
 - 카페와 역: Supabase `cafes`, `stations` 표 (서울 카페 공공데이터를 `tools/import_cafes.py`로 넣음). 공개 조회는 `cafes_public` 뷰. 자세한 건 `docs/data.md`
 - `public/data/cafes.json`은 config가 비어 있을 때 쓰는 데모 데이터
 - 후기·프로필: Supabase. 스키마는 `supabase/schema.sql` → `cafes.sql` → `lists.sql` 순서, 키는 `public/config.js` (비어 있으면 localStorage 데모 모드)
