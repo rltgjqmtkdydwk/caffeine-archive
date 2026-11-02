@@ -117,6 +117,10 @@ window.Me = (() => {
           <li><button type="button" data-me="logout">로그아웃</button></li>
           <li><button type="button" class="danger" data-me="delete">탈퇴하기 (내 후기·그룹 전부 삭제)</button></li>
         </ul>` : ''}
+        <p class="w-group">안내</p>
+        <ul class="menu">
+          <li><a class="menu-link" href="privacy.html" target="_blank" rel="noopener">개인정보처리방침<i aria-hidden="true">›</i></a></li>
+        </ul>
       </div>`;
   }
 

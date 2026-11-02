@@ -59,4 +59,4 @@
 ---
 
 <sub>카페 목록: 소상공인시장진흥공단 상가(상권)정보 · 역 정보: 서울시 역사마스터 정보 · 지도: OpenStreetMap, CARTO<br>
-만든 방식과 개발 메모는 <a href="docs/dev.md">docs/dev.md</a>, 카페 데이터 넣는 법은 <a href="docs/data.md">docs/data.md</a></sub>
+<a href="public/privacy.html">개인정보처리방침</a> · 만든 방식과 개발 메모는 <a href="docs/dev.md">docs/dev.md</a>, 카페 데이터 넣는 법은 <a href="docs/data.md">docs/data.md</a></sub>

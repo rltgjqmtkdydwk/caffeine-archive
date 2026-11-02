@@ -783,6 +783,8 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
 .groups li:last-child { border-bottom: 0; }
 .menu { border-top: 2px solid var(--ink); }
 .menu button { font-weight: 700; }
+.menu-link { display: flex; align-items: center; gap: 9px; padding: 13px 2px 14px 1px; color: var(--ink); text-decoration: none; font-weight: 700; font-size: calc(15.5px * var(--fs)); }
+.to-settings { display: block; }
 .menu .danger { color: var(--mood); font-weight: 500; font-size: 13.5px; }
 .menu i { margin-left: auto; font-style: normal; font-size: 20px; color: var(--ink-soft); }
 .live { padding: 1px 6px 2px; background: var(--mood); color: var(--paper); font-size: calc(10.5px * var(--fs)); font-weight: 700; font-style: normal; }
