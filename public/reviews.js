@@ -351,6 +351,7 @@ window.Reviews = (() => {
         </ul>
         ${LIVE ? '' : '<p class="w-demo">데모 모드라 실제 카카오 대신 이 브라우저에 가짜 계정을 만들어요.</p>'}
         <button type="button" class="to-settings" data-me="settings">글씨 크기 바꾸기 ›</button>
+        <a class="to-settings" href="privacy.html" target="_blank" rel="noopener">개인정보처리방침 ›</a>
       </div>
       <footer class="w-foot">
         <p class="w-err" hidden></p>
