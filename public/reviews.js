@@ -188,6 +188,16 @@ window.Reviews = (() => {
     return m;
   }
 
+  // 내가 후기 쓴 카페 id들 (지도에 표시용). 로그인 안 했으면 빈 목록
+  async function reviewedIds() {
+    await inited;
+    if (!user) return [];
+    if (!LIVE) return ls.get(KEY.reviews, []).filter(r => r.user_id === 'demo').map(r => r.cafe_id);
+    const { data, error } = await sb.from('reviews').select('cafe_id').eq('user_id', user.id).limit(5000);
+    if (error) throw error;
+    return data.map(r => r.cafe_id);
+  }
+
   async function mine(cafeId) {
     await inited;
     if (!user) return null;
@@ -607,6 +617,7 @@ window.Reviews = (() => {
     live: LIVE,
     ready: inited,
     db: () => ready.then(() => sb),
+    reviewedIds,
     member,
     toast,
     show,

@@ -19,7 +19,8 @@ const state = {
   mode: 'type', type: 'all', station: 'all',
   stations: [], classified: [], nearby: [], stationCafes: [], results: null,
   cache: new Map(), open: null, query: { type: '', station: '' },
-  myLists: [], group: null, groupCafes: [], shared: null
+  myLists: [], group: null, groupCafes: [], shared: null,
+  reviewed: new Set()
 };
 
 const $ = s => document.querySelector(s);
@@ -40,6 +41,10 @@ const ICON = {
 };
 // 내 그룹 어딘가에 담긴 카페면 하트를 채움
 const isSaved = id => state.myLists.some(l => l.items.includes(id));
+// 내가 후기 쓴 카페: 지도 점은 노랗게, 핀엔 별 딱지, 목록엔 "내 후기"
+async function refreshReviewed() {
+  try { state.reviewed = new Set(await Reviews.reviewedIds()); } catch (e) { console.error(e); }
+}
 async function refreshMyLists() {
   if (!Reviews.me().profile) { state.myLists = []; return; }
   try { state.myLists = await Lists.mine(); } catch (e) { console.error(e); }
@@ -174,7 +179,8 @@ function pinIcon(c, on, color) {
   const k = color ? 'g' : t.length > 1 ? 'both' : t.length ? (TYPES[t[0]]?.key || 'study') : 'none';
   const label = t.length ? t.map(x => TYPES[x]?.short || '').join('') : '카페';
   const style = color ? ` style="--g:${esc(color)}"` : '';
-  return L.divIcon({ className: `pin pin-${k}${on ? ' is-on' : ''}`, iconSize: null, html: `<b${style}>${esc(label)}</b>` });
+  const mine = state.reviewed.has(c.id) ? ' mine' : '';
+  return L.divIcon({ className: `pin pin-${k}${on ? ' is-on' : ''}${mine}`, iconSize: null, html: `<b${style}>${esc(label)}</b>` });
 }
 
 function drawMap() {
@@ -217,9 +223,10 @@ function drawMap() {
     if (pins.has(c.id)) return;
     // 점은 지도 위 그림이라 클릭이 지도까지 올라가면 바로 닫혀 버림 → bubblingMouseEvents 끔
     // 다시 그리는 건 클릭 처리가 끝난 다음에
+    const mine = state.reviewed.has(c.id);
     L.circleMarker([c.lat, c.lng], {
-      renderer: dotRenderer, radius: 6, weight: 2, bubblingMouseEvents: false,
-      color: '#211a15', fillColor: '#fffaf0', fillOpacity: 1
+      renderer: dotRenderer, radius: mine ? 8 : 6, weight: mine ? 3 : 2, bubblingMouseEvents: false,
+      color: '#211a15', fillColor: mine ? '#f2c230' : '#fffaf0', fillOpacity: 1
     }).on('click', () => setTimeout(() => openCafe(c.id))).addTo(dotLayer);
   });
 }
@@ -262,7 +269,7 @@ function itemHTML(c) {
     ? `<b class="n">★ ${Number(c.avg_rating).toFixed(1)}</b> 후기 ${c.review_count}`
     : '아직 후기 없음';
   return `<li><button type="button" class="item${c.types?.length ? '' : ' plain'}" data-id="${esc(c.id)}">
-    ${(c.types || []).map(t => `<i class="tag tag-${TYPES[t]?.key}">${esc(t)}</i>`).join('')}
+    ${(c.types || []).map(t => `<i class="tag tag-${TYPES[t]?.key}">${esc(t)}</i>`).join('')}${state.reviewed.has(c.id) ? '<i class="tag tag-mine">내 후기</i>' : ''}
     <strong>${esc(c.name)}</strong>
     <small>${where}${where ? ' · ' : ''}${score}</small>
     ${c.note ? `<p>${esc(c.note)}</p>` : ''}

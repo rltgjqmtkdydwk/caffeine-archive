@@ -817,6 +817,42 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
 .fs-preview p { margin-top: 6px; font-size: calc(13.5px * var(--fs)); line-height: 1.5; }
 .fs-preview + .w-hint { margin-top: 7px; }
 .to-settings { margin-top: 21px; font-size: 12.5px; color: var(--ink-soft); text-decoration: underline; }
+
+/* 내가 후기 쓴 카페 */
+.pin.mine b::before {
+  content: '★';
+  position: absolute;
+  top: -10px;
+  right: -11px;
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: var(--hi);
+  color: var(--ink);
+  font-size: 10px;
+  line-height: 1;
+}
+.tag-mine { background: var(--hi); color: var(--ink); }
+
+/* 프로필의 새 그룹 입력칸 */
+.new-row { display: flex; gap: 6px; padding: 12px 0 4px; border-bottom: 0 !important; }
+.new-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px 10px;
+  border: 1.5px dashed var(--ink);
+  border-radius: 0;
+  background: #f6f1e7;
+  color: var(--ink);
+  font: inherit;
+  font-size: calc(14.5px * var(--fs));
+}
+.new-row input:focus { outline: 2px solid var(--hi); outline-offset: 1px; border-style: solid; }
+.new-row button { flex: none; padding: 0 12px; border: 1.5px solid var(--ink); background: var(--hi); font-weight: 700; font-size: calc(13.5px * var(--fs)); }
+.new-row button:disabled { opacity: .5; }
 /* 넓은 화면 */
 @media (min-width: 860px) {
   .sheet, body[data-sheet] .sheet {
