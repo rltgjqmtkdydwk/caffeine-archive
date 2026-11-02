@@ -298,16 +298,15 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
 .ic {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 37px;
+  height: 37px;
   border: 1.5px solid var(--ink);
   background: var(--paper);
   color: var(--ink);
 }
 .ic:active { transform: translate(1px, 1px); }
-.ic.heart svg path { fill: transparent; transition: fill .15s; }
+.ic.heart { font-size: 23px; line-height: 1; padding-bottom: 2px; font-family: system-ui, sans-serif; }
 .ic.heart.on { background: #f6e3dc; color: var(--mood); border-color: var(--mood); }
-.ic.heart.on svg path { fill: var(--mood); }
 .detail h2 {
   margin: 5px 0 0;
   font: 400 calc(27px * var(--fs))/1.1 'Black Han Sans', sans-serif;
@@ -760,6 +759,7 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
 }
 .painting .gdot { transform: translate(1px, 1px); box-shadow: none; outline: 2px solid var(--hi); outline-offset: 2px; }
 .gname { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gname.heart { font-size: calc(19px * var(--fs)); line-height: 1; font-family: system-ui, sans-serif; color: var(--g); }
 .gopen span { margin-left: auto; font-size: calc(12.5px * var(--fs)); color: var(--ink-soft); }
 .gopen i { font-style: normal; font-size: calc(20px * var(--fs)); color: var(--ink-soft); }
 .grow-new { color: var(--ink-soft); font-size: calc(14px * var(--fs)); }

@@ -19,9 +19,9 @@ window.Me = (() => {
   function groupRow(l) {
     const open = painting === l.id;
     return `<li${open ? ' class="painting"' : ''}><div class="grow" style="--g:${esc(l.color)}">
-      <button type="button" class="gdot" data-me="color" data-id="${esc(l.id)}" aria-label="${esc(l.name)} 색 바꾸기" aria-expanded="${open}"></button>
+      <button type="button" class="gdot" data-me="color" data-id="${esc(l.id)}" aria-label="${esc(Lists.label(l))} 색 바꾸기" aria-expanded="${open}"></button>
       <button type="button" class="gopen" data-me="group" data-id="${esc(l.id)}">
-        <b class="gname">${esc(l.name)}</b>
+        <b class="gname${l.kind === 'heart' ? ' heart' : ''}">${esc(Lists.label(l))}</b>
         ${l.share_id ? '<em class="live">공유 중</em>' : ''}
         <span>${l.items.length}곳</span><i aria-hidden="true">›</i>
       </button>

@@ -168,7 +168,7 @@ window.Lists = (() => {
       const l = demo.all().find(x => x.share_id === sid);
       if (!l) return null;
       const p = Reviews.me().profile;
-      return { name: l.name, color: l.color, nickname: p?.nickname || '누군가', mark: p?.mark || 1, cafes: await Cafes.byIds(l.items) };
+      return { name: l.name, kind: l.kind, color: l.color, nickname: p?.nickname || '누군가', mark: p?.mark || 1, cafes: await Cafes.byIds(l.items) };
     }
     const db = await Reviews.db();
     const { data, error } = await db.rpc('get_shared_list', { p_share: sid });
@@ -207,29 +207,32 @@ window.Lists = (() => {
       await navigator.clipboard.writeText(url);
       Reviews.toast('링크 복사했어요');
     } catch {
-      prompt('이 링크를 복사해 줘', url);
+      prompt('이 링크를 복사해 주세요', url);
     }
   }
 
   // ---------- 담기 창 ----------
   let picking = null;     // { cafe, lists, onChange }
 
+  // 담기 창에는 직접 만든 그룹만. 하트는 ♥︎ 버튼으로, 카공·느좋은 후기로만 담김
   function pickerHTML() {
     const { cafe, lists } = picking;
-    const rows = lists.map(l => {
+    const mine = lists.filter(l => !l.kind);
+    const rows = mine.map(l => {
       const on = l.items.includes(cafe.id);
       return `<li><button type="button" class="pick${on ? ' on' : ''}" data-list-act="toggle" data-id="${esc(l.id)}" aria-pressed="${on}" style="--g:${esc(l.color || '#211a15')}">
-        <i class="box"></i><b>${esc(l.name)}</b><small>${l.items.length}곳</small>
+        <i class="box"></i><b>${esc(label(l))}</b><small>${l.items.length}곳</small>
       </button></li>`;
     }).join('');
     return `
       <header class="w-head">
         <button type="button" class="w-x" data-act="close" aria-label="닫기">×</button>
-        <small>${picking.added ? '하트에 담았어 · 다른 그룹에도 담을 수 있어' : '그룹에 담기'}</small>
+        <small>그룹에 담기</small>
         <h2>${esc(cafe.name)}</h2>
       </header>
       <div class="w-body">
-        <ul class="picks">${rows}</ul>
+        ${mine.length ? `<ul class="picks">${rows}</ul>` : '<p class="w-hint">직접 만든 그룹이 아직 없어요. 아래에서 하나 만들어 보세요.</p>'}
+        <p class="w-hint">♥︎는 카페 창의 하트로, 카공·느좋은 후기에서 고르면 자동으로 담겨요.</p>
         <div class="new-list">
           <input id="new-list" maxlength="${MAX_NAME}" placeholder="새 그룹 이름 (예: 성수 투어)" autocomplete="off">
           <button type="button" data-list-act="create">만들기</button>
@@ -237,32 +240,36 @@ window.Lists = (() => {
         <p class="w-err" hidden></p>
       </div>
       <footer class="w-foot">
-        <button type="button" class="w-send" data-act="close">다 됐어</button>
+        <button type="button" class="w-send" data-act="close">다 됐어요</button>
       </footer>`;
   }
 
-  // 하트 버튼: 아직 아무 데도 안 담긴 카페면 하트 그룹에 바로 담고, 다른 그룹도 고를 수 있게 창을 띄움
-  async function openPicker(cafe, onChange, { heartFirst = false } = {}) {
+  async function openPicker(cafe, onChange) {
     let lists;
     try {
       lists = await mine();
     } catch (err) {
       console.error(err);
-      return Reviews.toast('그룹을 못 불러왔어요. 잠시 뒤 다시 해 줘');
+      return Reviews.toast('그룹을 못 불러왔어요. 잠시 뒤 다시 해 주세요');
     }
-    let added = false;
-    const heart = lists.find(l => l.kind === 'heart');
-    if (heartFirst && heart && !lists.some(l => l.items.includes(cafe.id))) {
-      try {
-        await add(heart.id, cafe.id);
-        heart.items.unshift(cafe.id);
-        added = true;
-        onChange?.();
-      } catch (err) { console.error(err); }
-    }
-    picking = { cafe, lists, onChange, added };
+    picking = { cafe, lists, onChange };
     Reviews.show(pickerHTML(), 'picker');
   }
+
+  // ♥︎ 버튼: 하트 그룹에 넣었다 뺐다. 돌려주는 값은 담긴 상태(true/false)
+  async function toggleHeart(cafeId) {
+    const lists = await mine();
+    const heart = lists.find(l => l.kind === 'heart');
+    if (!heart) throw new Error('no heart list');
+    const on = heart.items.includes(cafeId);
+    if (on) await drop(heart.id, cafeId);
+    else await add(heart.id, cafeId);
+    return !on;
+  }
+
+  // 그룹 이름: 하트 그룹은 ♥︎ 기호로
+  // \uFE0E: 이모지 말고 글자 하트로
+  const label = l => l?.kind === 'heart' ? '♥\uFE0E' : (l?.name || '');
 
   function repaint() {
     const scroll = $('#panel .w-body')?.scrollTop || 0;
@@ -281,8 +288,8 @@ window.Lists = (() => {
     const m = String(err?.message || err);
     if (/too many lists/.test(m)) return '그룹은 30개까지 만들 수 있어요.';
     if (/list is full/.test(m)) return '그룹 하나에 500곳까지 담을 수 있어요.';
-    if (/permission|row-level|violates check/.test(m) || err?.code === '42501') return 'DB 설정이 아직이에요. Supabase에서 lists.sql을 다시 실행해 줘.';
-    return '저장하지 못했어요. 잠시 뒤 다시 해 줘.';
+    if (/permission|row-level|violates check/.test(m) || err?.code === '42501') return 'DB 설정이 아직이에요. Supabase에서 lists.sql을 다시 실행해 주세요.';
+    return '저장하지 못했어요. 잠시 뒤 다시 해 주세요.';
   }
 
   document.addEventListener('click', async e => {
@@ -324,5 +331,5 @@ window.Lists = (() => {
     }
   });
 
-  return { live: LIVE, BASE_COLORS, palette, addColor, colorOf, setColor, syncFromReview, mine, create, rename, remove, add, drop, share, unshare, shared, linkTo, sendLink, openPicker };
+  return { live: LIVE, BASE_COLORS, palette, addColor, colorOf, setColor, label, syncFromReview, mine, create, rename, remove, add, drop, share, unshare, shared, linkTo, sendLink, openPicker, toggleHeart };
 })();

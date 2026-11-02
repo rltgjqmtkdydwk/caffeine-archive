@@ -179,6 +179,7 @@ set search_path = ''
 as $$
   select json_build_object(
     'name', l.name,
+    'kind', l.kind,
     'color', l.color,
     'nickname', p.nickname,
     'mark', p.mark,
