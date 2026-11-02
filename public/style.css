@@ -73,7 +73,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   font-weight: 700;
 }
 .me.in { border-style: solid; background: var(--paper-2); }
-.me .mk { width: 17px; height: 17px; }
+.me .mk { width: 25px; height: 25px; }
 .mode {
   display: flex;
   border: 2px solid var(--ink);
@@ -413,16 +413,15 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
 }
 .write-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 
-/* 프로필 표시 (카카오 사진 대신 쓰는 모양 8개) */
-.mk { display: inline-block; flex: none; width: 13px; height: 13px; background: var(--c); }
-.mk-1 { --c: #56622b; border-radius: 50%; }
-.mk-2 { --c: #c2452d; }
-.mk-3 { --c: #211a15; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.mk-4 { --c: #d9a21b; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
-.mk-5 { --c: #2f5d5a; border-radius: 50% 50% 0 0; }
-.mk-6 { background: none; border: 3px solid #7a4a2a; border-radius: 50%; }
-.mk-7 { --c: #5b3f6b; clip-path: polygon(35% 0, 65% 0, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0 65%, 0 35%, 35% 35%); }
-.mk-8 { --c: #d06a24; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+/* 프로필 동물 (카카오 사진 대신) */
+.mk {
+  display: inline-block;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
+}
+.mk svg { display: block; width: 100%; height: 100%; }
 
 /* 패널: 로그인 / 프로필 / 후기 쓰기 */
 .panel {
@@ -572,15 +571,17 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
 }
 .nick button { padding: 0 12px; border: 1.5px dashed var(--ink); font-size: calc(13px * var(--fs)); font-weight: 700; }
 .marks { display: flex; flex-wrap: wrap; gap: 6px 7px; }
+.marks { gap: 8px 9px; }
 .marks button {
   display: grid;
   place-items: center;
-  width: 47px;
-  height: 47px;
+  width: 74px;
+  padding: 8px 0 7px;
   border: 1.5px solid var(--ink);
   background: var(--paper);
 }
-.marks button .mk { width: 21px; height: 21px; }
+.marks button .mk { width: 50px; height: 50px; }
+.marks button small { display: block; margin-top: 3px; font-size: calc(11.5px * var(--fs)); font-weight: 700; }
 .marks button.on { background: var(--hi); box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px, -2px) rotate(-3deg); }
 .acct { display: flex; flex-direction: column; align-items: flex-start; gap: 13px; margin-top: 39px; padding-top: 15px; border-top: 1px solid var(--ink); }
 .acct button { font-size: calc(13.5px * var(--fs)); font-weight: 700; text-decoration: underline; }
@@ -731,7 +732,7 @@ body:not([data-sheet="peek"]) .handle small { display: none; }
 
 /* 내 프로필 */
 .who { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-.who .mk { width: 26px; height: 26px; }
+.who .mk { width: 40px; height: 40px; }
 .who h2 { margin: 0; }
 .who-edit { margin-left: 3px; font-size: calc(12.5px * var(--fs)); color: var(--ink-soft); text-decoration: underline; }
 .groups, .menu { list-style: none; padding: 0; margin: 0; }

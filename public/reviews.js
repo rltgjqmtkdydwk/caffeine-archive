@@ -4,8 +4,8 @@ window.Reviews = (() => {
   const LIVE = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
   const KEY = { reviews: 'caffeine-demo-reviews', user: 'caffeine-demo-user' };
 
-  const STAR_WORDS = ['', '별로', '아쉬움', '괜찮음', '좋음', '또 갈 곳'];
-  const MARKS = 8;
+  const STAR_WORDS = ['', '별로예요', '아쉬워요', '괜찮아요', '좋아요', '또 갈래요'];
+  const MARKS = Avatars.count;
   const NICK_RE = /^[가-힣a-zA-Z0-9_.]{2,12}$/;
 
   const STYLES = [
@@ -38,7 +38,7 @@ window.Reviews = (() => {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, ch =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const labelOf = (q, v) => (q.opts.find(([x]) => x === v) || [])[1];
-  const mark = n => `<i class="mk mk-${Number(n) || 1}" aria-hidden="true"></i>`;
+  const mark = n => `<i class="mk" title="${Avatars.nameOf(n)}">${Avatars.svg(n)}</i>`;
   const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
 
   const ls = {
@@ -371,9 +371,10 @@ window.Reviews = (() => {
   function showProfile(next) {
     afterProfile = next || null;
     const first = !profile;
-    pDraft = { nickname: profile?.nickname || suggestNick(), mark: profile?.mark || Math.ceil(Math.random() * MARKS) };
+    const m0 = profile?.mark ? ((profile.mark - 1) % MARKS) + 1 : Math.ceil(Math.random() * MARKS);
+    pDraft = { nickname: profile?.nickname || suggestNick(), mark: m0 };
     show(`
-      ${head(first ? '처음 한 번만' : '내 프로필', first ? '여기서 쓸 이름 정하기' : '닉네임·표시 바꾸기')}
+      ${head(first ? '처음 한 번만' : '내 프로필', first ? '여기서 쓸 이름을 정해요' : '닉네임·표시 바꾸기')}
       <div class="w-body">
         <p class="w-hint">후기 옆에 붙는 건 이 닉네임과 표시뿐이에요. 카카오에서 쓰는 이름과 다르게 지으면 누가 썼는지 아무도 몰라요.</p>
         <label class="w-label" for="nick">닉네임 <small>2–12자, 한글·영문·숫자</small></label>
@@ -383,7 +384,7 @@ window.Reviews = (() => {
         </div>
         <p class="w-label" style="margin-top:19px">표시</p>
         <div class="marks">${Array.from({ length: MARKS }, (_, i) =>
-          `<button type="button" data-act="mark" data-v="${i + 1}" class="${pDraft.mark === i + 1 ? 'on' : ''}" aria-label="표시 ${i + 1}">${mark(i + 1)}</button>`).join('')}</div>
+          `<button type="button" data-act="mark" data-v="${i + 1}" class="${pDraft.mark === i + 1 ? 'on' : ''}" aria-label="${Avatars.nameOf(i + 1)}">${mark(i + 1)}<small>${Avatars.nameOf(i + 1)}</small></button>`).join('')}</div>
       </div>
       <footer class="w-foot">
         <p class="w-err" hidden></p>
