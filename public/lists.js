@@ -214,29 +214,28 @@ window.Lists = (() => {
   // ---------- 담기 창 ----------
   let picking = null;     // { cafe, lists, onChange }
 
-  // 담기 창에는 직접 만든 그룹만. 하트는 ♥︎ 버튼으로, 카공·느좋은 후기로만 담김
+  // 담기 창: ♥ 그룹과 직접 만든 그룹. 카공·느좋은 후기에서 고르면 자동이라 여기엔 안 나옴
   function pickerHTML() {
-    const { cafe, lists } = picking;
-    const mine = lists.filter(l => !l.kind);
-    const rows = mine.map(l => {
+    const { cafe, lists, added } = picking;
+    const rows = lists.filter(l => l.kind === 'heart' || !l.kind).map(l => {
       const on = l.items.includes(cafe.id);
-      return `<li><button type="button" class="pick${on ? ' on' : ''}" data-list-act="toggle" data-id="${esc(l.id)}" aria-pressed="${on}" style="--g:${esc(l.color || '#211a15')}">
+      return `<li><button type="button" class="pick${on ? ' on' : ''}${l.kind === 'heart' ? ' heart' : ''}" data-list-act="toggle" data-id="${esc(l.id)}" aria-pressed="${on}" style="--g:${esc(l.color || '#211a15')}">
         <i class="box"></i><b>${esc(label(l))}</b><small>${l.items.length}곳</small>
       </button></li>`;
     }).join('');
     return `
       <header class="w-head">
         <button type="button" class="w-x" data-act="close" aria-label="닫기">×</button>
-        <small>그룹에 담기</small>
+        <small>${added ? '♥︎에 담았어요 · 다른 그룹에도 담을 수 있어요' : '그룹에 담기'}</small>
         <h2>${esc(cafe.name)}</h2>
       </header>
       <div class="w-body">
-        ${mine.length ? `<ul class="picks">${rows}</ul>` : '<p class="w-hint">직접 만든 그룹이 아직 없어요. 아래에서 하나 만들어 보세요.</p>'}
-        <p class="w-hint">♥︎는 카페 창의 하트로, 카공·느좋은 후기에서 고르면 자동으로 담겨요.</p>
+        <ul class="picks">${rows}</ul>
         <div class="new-list">
           <input id="new-list" maxlength="${MAX_NAME}" placeholder="새 그룹 이름 (예: 성수 투어)" autocomplete="off">
           <button type="button" data-list-act="create">만들기</button>
         </div>
+        <p class="w-hint">카공·느좋 그룹은 후기에서 고르면 자동으로 담겨요.</p>
         <p class="w-err" hidden></p>
       </div>
       <footer class="w-foot">
@@ -244,7 +243,8 @@ window.Lists = (() => {
       </footer>`;
   }
 
-  async function openPicker(cafe, onChange) {
+  // heartFirst: ♥ 버튼으로 열었을 때, 아직 ♥·직접 만든 그룹 어디에도 없으면 ♥ 그룹에 먼저 담음
+  async function openPicker(cafe, onChange, { heartFirst = false } = {}) {
     let lists;
     try {
       lists = await mine();
@@ -252,7 +252,21 @@ window.Lists = (() => {
       console.error(err);
       return Reviews.toast('그룹을 못 불러왔어요. 잠시 뒤 다시 해 주세요');
     }
-    picking = { cafe, lists, onChange };
+    let added = false;
+    const heart = lists.find(l => l.kind === 'heart');
+    const saved = lists.some(l => (l.kind === 'heart' || !l.kind) && l.items.includes(cafe.id));
+    if (heartFirst && heart && !saved) {
+      try {
+        await add(heart.id, cafe.id);
+        heart.items.unshift(cafe.id);
+        added = true;
+        onChange?.();
+      } catch (err) {
+        console.error(err);
+        Reviews.toast(explain(err));
+      }
+    }
+    picking = { cafe, lists, onChange, added };
     Reviews.show(pickerHTML(), 'picker');
   }
 
