@@ -340,6 +340,7 @@ window.Reviews = (() => {
           <li>탈퇴하면 계정과 후기가 전부 지워져요.</li>
         </ul>
         ${LIVE ? '' : '<p class="w-demo">데모 모드라 실제 카카오 대신 이 브라우저에 가짜 계정을 만들어요.</p>'}
+        <button type="button" class="to-settings" data-me="settings">글씨 크기 바꾸기 ›</button>
       </div>
       <footer class="w-foot">
         <p class="w-err" hidden></p>

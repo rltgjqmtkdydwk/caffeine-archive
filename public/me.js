@@ -66,12 +66,59 @@ window.Me = (() => {
         <ul class="groups">${lists.map(groupRow).join('')}
           <li><button type="button" class="grow-new" data-me="new">+ 새 그룹</button></li>
         </ul>
+        <ul class="menu">
+          <li><button type="button" data-me="settings">설정<i aria-hidden="true">›</i></button></li>
+        </ul>
+      </div>`;
+  }
+
+  // ---------- 설정 ----------
+  const FS_KEY = 'caffeine-fs';
+  const SIZES = [['s', '작게'], ['m', '보통'], ['l', '크게'], ['xl', '아주 크게']];
+  const currentFs = () => document.documentElement.dataset.fs || 'm';
+
+  function setFs(v) {
+    if (v === 'm') delete document.documentElement.dataset.fs;
+    else document.documentElement.dataset.fs = v;
+    try {
+      if (v === 'm') localStorage.removeItem(FS_KEY);
+      else localStorage.setItem(FS_KEY, v);
+    } catch {}
+  }
+
+  function settingsHTML() {
+    const member = !!Reviews.me().profile;
+    const fs = currentFs();
+    return `
+      <header class="w-head has-back">
+        ${member ? '<button type="button" class="w-back" data-me="home" aria-label="내 프로필로">‹</button>' : ''}
+        <button type="button" class="w-x" data-act="close" aria-label="닫기">×</button>
+        <small>${member ? '내 프로필' : '카페인 아카이브'}</small>
+        <h2>설정</h2>
+      </header>
+      <div class="w-body">
+        <p class="w-group">글씨 크기</p>
+        <div class="seg" role="radiogroup" aria-label="글씨 크기">
+          ${SIZES.map(([v, label]) => `<button type="button" role="radio" aria-checked="${fs === v}" class="seg-${v}${fs === v ? ' on' : ''}" data-me="fs" data-v="${v}">${label}</button>`).join('')}
+        </div>
+        <div class="fs-preview">
+          <i class="tag tag-study">카공</i>
+          <strong>벽돌커피</strong>
+          <small>홍대입구역 도보 2분 · ★ 4.5 후기 2</small>
+          <p>창가 바 자리가 제일 조용함. 콘센트는 테이블마다 있어.</p>
+        </div>
+        <p class="w-hint">이 기기에서만 바뀌어요.</p>
+        ${member ? `
         <p class="w-group">계정</p>
         <ul class="menu">
           <li><button type="button" data-me="logout">로그아웃</button></li>
           <li><button type="button" class="danger" data-me="delete">탈퇴하기 (내 후기·그룹 전부 삭제)</button></li>
-        </ul>
+        </ul>` : ''}
       </div>`;
+  }
+
+  function settings() {
+    Reviews.show(settingsHTML(), 'settings');
   }
 
   async function open() {
@@ -91,6 +138,13 @@ window.Me = (() => {
       return App.openGroup(b.dataset.id);
     }
     if (act === 'edit') return Reviews.editProfile(open);
+    if (act === 'settings') return settings();
+    if (act === 'home') return open();
+    if (act === 'fs') {
+      setFs(b.dataset.v);
+      $('#panel').innerHTML = settingsHTML();
+      return;
+    }
     if (act === 'color') {
       painting = painting === b.dataset.id ? null : b.dataset.id;
       return repaint();
@@ -133,5 +187,5 @@ window.Me = (() => {
     paint(inp.dataset.id, inp.value.toLowerCase());
   });
 
-  return { open };
+  return { open, settings };
 })();
