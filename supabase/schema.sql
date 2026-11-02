@@ -65,8 +65,10 @@ create policy "read own profile" on public.profiles for select to authenticated 
 create policy "make own profile" on public.profiles for insert to authenticated with check (id = auth.uid());
 create policy "edit own profile" on public.profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 
-revoke all on public.profiles from anon;
-grant select, insert, update on public.profiles to authenticated;
+-- 닉네임과 표시만 고칠 수 있게 열 단위로 권한을 줌 (is_admin 같은 열은 본인도 못 바꿈)
+revoke all on public.profiles from anon, authenticated;
+grant select on public.profiles to authenticated;
+grant insert (id, nickname, mark), update (id, nickname, mark) on public.profiles to authenticated;
 
 
 -- 2. 후기 -------------------------------------------------------------------------
