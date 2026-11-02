@@ -64,7 +64,10 @@ window.Me = (() => {
       <div class="w-body">
         <p class="w-group">내 그룹</p>
         <ul class="groups">${lists.map(groupRow).join('')}
-          <li><button type="button" class="grow-new" data-me="new">+ 새 그룹</button></li>
+          <li class="new-row">
+            <input id="me-new" maxlength="20" placeholder="새 그룹 이름 (예: 성수 투어)" autocomplete="off" enterkeyhint="done">
+            <button type="button" data-me="new">+ 만들기</button>
+          </li>
         </ul>
         <ul class="menu">
           <li><button type="button" data-me="settings">설정<i aria-hidden="true">›</i></button></li>
@@ -151,15 +154,20 @@ window.Me = (() => {
     }
     if (act === 'pick') return paint(b.dataset.id, b.dataset.color);
     if (act === 'new') {
-      const name = prompt('새 그룹 이름 (20자까지)');
-      if (!name?.trim()) return;
+      const inp = $('#me-new');
+      const name = inp.value.trim();
+      if (!name) return inp.focus();
+      b.disabled = true;
       try {
         await Lists.create(name);
         await App.refreshMyLists();
-        return open();
+        await open();
+        return Reviews.toast(`"${name}" 그룹 만들었어`);
       } catch (err) {
         console.error(err);
-        return alert(/too many lists/.test(String(err?.message)) ? '그룹은 30개까지 만들 수 있어요.' : '못 만들었어요. 잠시 뒤 다시 해 줘.');
+        b.disabled = false;
+        const m = String(err?.message || '');
+        return Reviews.toast(/too many lists/.test(m) ? '그룹은 30개까지 만들 수 있어요' : /permission|42501/.test(m + err?.code) ? 'DB 설정이 아직이에요 (lists.sql 다시 실행)' : '못 만들었어요. 잠시 뒤 다시 해 줘');
       }
     }
     if (act === 'logout') {
@@ -178,6 +186,13 @@ window.Me = (() => {
         alert('탈퇴하지 못했어요. 잠시 뒤 다시 시도해 주세요.');
       }
     }
+  });
+
+  // 입력칸에서 엔터(한글 조합 중이 아닐 때)도 만들기
+  document.addEventListener('keydown', e => {
+    if (e.target.id !== 'me-new' || e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
+    e.preventDefault();
+    $('#panel [data-me="new"]')?.click();
   });
 
   document.addEventListener('change', e => {
