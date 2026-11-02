@@ -55,3 +55,27 @@ update public.profiles set is_admin = true where nickname = '내닉네임';
 - 나머지 카페: 줌 15 이상에서 화면 안에 있는 것만 받아서 작은 점으로 (최대 1200곳)
 - 역을 고르면 그 역에 묶인 카페 전부, 이름 검색은 최대 40곳
 - `public/config.js`가 비어 있으면 예전처럼 `public/data/cafes.json` 데모로 돌아감
+
+## 첫 화면 채우기
+
+처음엔 카공·느좋 표시가 붙은 카페가 없어서, 표시된 곳이 8곳보다 적으면 앱이 홍대입구 근처를 동네 크기로 열어 카페 점을 보여 줌.
+표시가 8곳 넘게 생기면 그 카페들이 다 보이게 열림. 운영자가 아는 카페부터 몇 곳 붙여 두면 첫인상이 확 달라짐.
+
+방법 1. 사이트에서: 운영자 계정으로 카페를 열고 `카공 표시` / `느좋 표시`.
+
+방법 2. SQL Editor에서 한꺼번에:
+
+```sql
+-- 이름으로 찾기 (같은 이름 지점이 많으면 주소로 골라내기)
+select id, name, address from cafes where name like '%카페이름%';
+
+-- 찾은 id에 표시 붙이기
+update cafes set admin_types = '{카공}'       where id = 'sb-...';
+update cafes set admin_types = '{느좋}'       where id = 'sb-...';
+update cafes set admin_types = '{카공,느좋}'  where id = 'sb-...';
+
+-- 지금 표시된 카페 수
+select count(*) from cafes_public where types <> '{}';
+```
+
+후기에서 카공·느좋 표가 2개 이상 + 절반 이상이면 운영자 표시 없이도 자동으로 붙음.
