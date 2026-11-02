@@ -44,11 +44,27 @@ function groupView() {
 // 지도
 const map = L.map('map', { zoomControl: false, attributionControl: false, preferCanvas: true }).setView([37.556, 126.99], 13);
 L.control.attribution({ position: 'topright', prefix: '<a href="https://leafletjs.com">Leaflet</a>' }).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  maxZoom: 19,
-  subdomains: 'abcd',
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
-}).addTo(map);
+// 배경 지도. CARTO는 2026년부터 키가 있어야 함 (없으면 "API key required" 워터마크)
+// config.js에 cartoKey가 있으면 CARTO, 없거나 안 불러와지면 OSM 기본 타일
+const OSM = '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>';
+const CARTO_KEY = (window.CAFE_CONFIG || {}).cartoKey;
+const TILES = [
+  CARTO_KEY && [`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(CARTO_KEY)}`,
+    { maxZoom: 19, subdomains: 'abcd', attribution: `${OSM} &copy; <a href="https://carto.com/attributions">CARTO</a>` }],
+  ['https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: OSM }]
+].filter(Boolean);
+function useTiles(i) {
+  const [url, opt] = TILES[i];
+  const layer = L.tileLayer(url, opt).addTo(map);
+  let ok = false, bad = 0;
+  layer.on('tileload', () => { ok = true; });
+  layer.on('tileerror', () => {
+    if (ok || ++bad < 4 || !TILES[i + 1]) return;
+    map.removeLayer(layer);
+    useTiles(i + 1);
+  });
+}
+useTiles(0);
 
 const stationLayer = L.layerGroup();
 const dotLayer = L.layerGroup().addTo(map);
@@ -174,10 +190,12 @@ function drawMap() {
     state.results ? state.results : state.nearby;
   dots.forEach(c => {
     if (pins.has(c.id)) return;
+    // 점은 지도 위 그림이라 클릭이 지도까지 올라가면 바로 닫혀 버림 → bubblingMouseEvents 끔
+    // 다시 그리는 건 클릭 처리가 끝난 다음에
     L.circleMarker([c.lat, c.lng], {
-      renderer: dotRenderer, radius: 5, weight: 2,
+      renderer: dotRenderer, radius: 6, weight: 2, bubblingMouseEvents: false,
       color: '#211a15', fillColor: '#fffaf0', fillOpacity: 1
-    }).on('click', () => openCafe(c.id)).addTo(dotLayer);
+    }).on('click', () => setTimeout(() => openCafe(c.id))).addTo(dotLayer);
   });
 }
 
@@ -659,9 +677,22 @@ document.querySelectorAll('.mode button').forEach(b =>
   b.addEventListener('click', () => setMode(b.dataset.mode)));
 
 $('#q').addEventListener('input', e => onSearchInput(e.target.value));
+// 한글은 조합 중에 Enter를 누르면 마지막 글자가 한 번 더 들어가서, 조합 중일 땐 Enter를 무시
 $('#q').addEventListener('keydown', e => {
+  if (e.isComposing || e.keyCode === 229) return;
   if (e.key === 'Escape') { e.target.blur(); clearSearch(); }
-  if (e.key === 'Enter') e.target.blur();
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const v = e.target.value;
+  if (state.mode === 'station') {
+    state.query.station = v;
+    const top = stationOptions()[0];
+    if (top && v.trim()) pickStation(top.s.id);
+  } else {
+    clearTimeout(searchTimer);
+    onSearchInput(v);
+  }
+  e.target.blur();
 });
 
 $('#chip-list').addEventListener('click', e => {
