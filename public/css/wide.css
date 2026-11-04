@@ -1,0 +1,17 @@
+/* 넓은 화면 */
+@media (min-width: 860px) {
+  .sheet, body[data-sheet] .sheet {
+    left: auto;
+    right: 19px;
+    bottom: 18px;
+    width: 370px;
+    height: calc(100dvh - 165px);
+    border: 2px solid var(--ink);
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+  .handle { pointer-events: none; }
+  .handle span { display: none; }
+  .detail { left: auto; right: 405px; bottom: 18px; width: 340px; }
+  .locate, body[data-sheet] .locate { right: auto; left: 15px; bottom: 26px; visibility: visible; }
+  .panel { inset: 18px 19px 18px auto; width: 430px; border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+}

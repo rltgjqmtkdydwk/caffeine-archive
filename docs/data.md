@@ -54,7 +54,7 @@ update public.profiles set is_admin = true where nickname = '내닉네임';
 - 카공/느좋이 붙은 카페: 처음에 전부 받아서 핀으로 늘 표시
 - 나머지 카페: 줌 15 이상에서 화면 안에 있는 것만 받아서 작은 점으로 (최대 1200곳)
 - 역을 고르면 그 역에 묶인 카페 전부, 이름 검색은 최대 40곳
-- `public/config.js`가 비어 있으면 예전처럼 `public/data/cafes.json` 데모로 돌아감
+- `public/js/config.js`가 비어 있으면 예전처럼 `public/data/cafes.json` 데모로 돌아감
 
 ## 첫 화면 채우기
 
